@@ -270,9 +270,11 @@ shieldRing.visible = false;
 shipGroup.add(shieldRing);
 scene.add(shipGroup);
 
-// ---------- Engine exhaust trail ----------
-const TRAIL_COUNT = 50;
-const trailData = Array.from({ length: TRAIL_COUNT }, () => ({ life: 0, x: 0, y: 0, z: 0, hue: 0 }));
+// ---------- Engine exhaust trail + impact bursts (shared particle pool) ----------
+const TRAIL_COUNT = 70;
+const trailData = Array.from({ length: TRAIL_COUNT }, () => ({
+  life: 0, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r: 1, g: 1, b: 1,
+}));
 const trailGeo = new THREE.BufferGeometry();
 trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_COUNT * 3), 3));
 trailGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(TRAIL_COUNT * 3), 3));
@@ -310,6 +312,25 @@ const trailPoints = new THREE.Points(trailGeo, trailMat);
 scene.add(trailPoints);
 let trailSpawnT = 0;
 
+function spawnBurst(x, y, z, r, g, b, count) {
+  for (let n = 0; n < count; n++) {
+    const slot = trailData.find((p) => p.life <= 0);
+    if (!slot) break;
+    const angle = Math.random() * Math.PI * 2;
+    const spd = 1.4 + Math.random() * 1.6;
+    slot.life = 1;
+    slot.x = x;
+    slot.y = y;
+    slot.z = z;
+    slot.vx = Math.cos(angle) * spd;
+    slot.vy = Math.sin(angle) * spd;
+    slot.vz = (Math.random() - 0.5) * spd;
+    slot.r = r;
+    slot.g = g;
+    slot.b = b;
+  }
+}
+
 function updateTrail(dt) {
   trailSpawnT += dt;
   if (trailSpawnT > 0.018) {
@@ -320,7 +341,11 @@ function updateTrail(dt) {
       slot.x = shipX + (Math.random() - 0.5) * 0.1;
       slot.y = shipY + (Math.random() - 0.5) * 0.1 - 0.04;
       slot.z = shipZ + 0.34;
-      slot.hue = Math.random() < 0.5 ? 0 : 1;
+      slot.vx = 0;
+      slot.vy = 0;
+      slot.vz = 0;
+      if (Math.random() < 0.5) { slot.r = 1; slot.g = 0.55; slot.b = 0.85; }
+      else { slot.r = 0.5; slot.g = 0.9; slot.b = 1; }
     }
   }
   const posAttr = trailGeo.attributes.position;
@@ -328,11 +353,15 @@ function updateTrail(dt) {
   const alphaAttr = trailGeo.attributes.aAlpha;
   for (let i = 0; i < TRAIL_COUNT; i++) {
     const p = trailData[i];
-    if (p.life > 0) p.life = Math.max(0, p.life - dt * 1.7);
+    if (p.life > 0) {
+      p.life = Math.max(0, p.life - dt * 1.7);
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+    }
     posAttr.setXYZ(i, p.x, p.y, p.z);
     alphaAttr.setX(i, p.life);
-    if (p.hue) colAttr.setXYZ(i, 1, 0.55, 0.85);
-    else colAttr.setXYZ(i, 0.5, 0.9, 1);
+    colAttr.setXYZ(i, p.r, p.g, p.b);
   }
   posAttr.needsUpdate = true;
   colAttr.needsUpdate = true;
@@ -700,6 +729,7 @@ function updatePlaying(dt) {
       if (dist < COLLIDE_RADIUS) {
         if (shieldCharges > 0) {
           shieldCharges--;
+          spawnBurst(o.x, o.y, o.z, 0.43, 1, 0.62, 14);
           resetPoolMesh(o);
           sfx.shieldHit();
           triggerShake(0.16, 0.22);
