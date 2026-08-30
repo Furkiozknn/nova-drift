@@ -56,6 +56,10 @@ const MAGNET_RADIUS = 4.5;
 const SHIELD_MAX = 2;
 const MAGNET_DURATION = 6;
 const MULT_DURATION = 8;
+const NEAR_MISS_RADIUS = COLLIDE_RADIUS + 0.45;
+const NEAR_MISS_BONUS = 10;
+
+const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 // ---------- Audio (synthesized with Web Audio API - no external files) ----------
 const sfx = (() => {
@@ -104,6 +108,10 @@ const sfx = (() => {
   function shieldHit() {
     tone(220, 0.09, 'square', 0.3);
     tone(150, 0.14, 'square', 0.24, 0.03);
+  }
+
+  function nearMiss() {
+    tone(1500, 0.07, 'sine', 0.16);
   }
 
   function crash() {
@@ -164,7 +172,7 @@ const sfx = (() => {
   }
   function isMuted() { return muted; }
 
-  return { collect, power, shieldHit, crash, click, engineStart, engineSet, engineStop, setMuted, isMuted };
+  return { collect, power, shieldHit, nearMiss, crash, click, engineStart, engineSet, engineStop, setMuted, isMuted };
 })();
 
 const muteBtn = document.getElementById('muteBtn');
@@ -173,6 +181,20 @@ muteBtn.addEventListener('click', () => {
   sfx.setMuted(!sfx.isMuted());
   muteBtn.textContent = sfx.isMuted() ? '🔇' : '🔊';
 });
+
+// ---------- Screen shake + hit flash ----------
+let shakeT = 0, shakeMag = 0;
+function triggerShake(mag, dur) {
+  if (reducedMotion) return;
+  shakeMag = mag;
+  shakeT = dur;
+}
+const hitFlashEl = document.getElementById('hitFlash');
+function flash(color) {
+  hitFlashEl.style.background = color;
+  hitFlashEl.classList.add('on');
+  requestAnimationFrame(() => requestAnimationFrame(() => hitFlashEl.classList.remove('on')));
+}
 
 // ---------- Starfield ----------
 const STAR_COUNT = 700;
@@ -248,6 +270,75 @@ shieldRing.visible = false;
 shipGroup.add(shieldRing);
 scene.add(shipGroup);
 
+// ---------- Engine exhaust trail ----------
+const TRAIL_COUNT = 50;
+const trailData = Array.from({ length: TRAIL_COUNT }, () => ({ life: 0, x: 0, y: 0, z: 0, hue: 0 }));
+const trailGeo = new THREE.BufferGeometry();
+trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_COUNT * 3), 3));
+trailGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(TRAIL_COUNT * 3), 3));
+trailGeo.setAttribute('aAlpha', new THREE.BufferAttribute(new Float32Array(TRAIL_COUNT), 1));
+const trailMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  vertexColors: true,
+  uniforms: { uPixelRatio: { value: renderer.getPixelRatio() } },
+  vertexShader: `
+    attribute float aAlpha;
+    uniform float uPixelRatio;
+    varying vec3 vColor;
+    varying float vAlpha;
+    void main() {
+      vColor = color;
+      vAlpha = aAlpha;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = 55.0 * uPixelRatio * aAlpha / -mv.z;
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vColor;
+    varying float vAlpha;
+    void main() {
+      float d = length(gl_PointCoord - vec2(0.5));
+      float a = smoothstep(0.5, 0.0, d);
+      gl_FragColor = vec4(vColor, a * vAlpha);
+    }
+  `,
+});
+const trailPoints = new THREE.Points(trailGeo, trailMat);
+scene.add(trailPoints);
+let trailSpawnT = 0;
+
+function updateTrail(dt) {
+  trailSpawnT += dt;
+  if (trailSpawnT > 0.018) {
+    trailSpawnT = 0;
+    const slot = trailData.find((p) => p.life <= 0);
+    if (slot) {
+      slot.life = 1;
+      slot.x = shipX + (Math.random() - 0.5) * 0.1;
+      slot.y = shipY + (Math.random() - 0.5) * 0.1 - 0.04;
+      slot.z = shipZ + 0.34;
+      slot.hue = Math.random() < 0.5 ? 0 : 1;
+    }
+  }
+  const posAttr = trailGeo.attributes.position;
+  const colAttr = trailGeo.attributes.color;
+  const alphaAttr = trailGeo.attributes.aAlpha;
+  for (let i = 0; i < TRAIL_COUNT; i++) {
+    const p = trailData[i];
+    if (p.life > 0) p.life = Math.max(0, p.life - dt * 1.7);
+    posAttr.setXYZ(i, p.x, p.y, p.z);
+    alphaAttr.setX(i, p.life);
+    if (p.hue) colAttr.setXYZ(i, 1, 0.55, 0.85);
+    else colAttr.setXYZ(i, 0.5, 0.9, 1);
+  }
+  posAttr.needsUpdate = true;
+  colAttr.needsUpdate = true;
+  alphaAttr.needsUpdate = true;
+}
+
 // ---------- Obstacle / orb / power-up pools ----------
 function makePool(count, geo, mat) {
   const pool = [];
@@ -255,7 +346,7 @@ function makePool(count, geo, mat) {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.visible = false;
     scene.add(mesh);
-    pool.push({ mesh, active: false, z: 0, x: 0, y: 0 });
+    pool.push({ mesh, active: false, z: 0, x: 0, y: 0, nearMissDone: false });
   }
   return pool;
 }
@@ -322,6 +413,7 @@ function spawnPowerup(atZ) {
 function resetPoolMesh(slot) {
   slot.active = false;
   slot.mesh.visible = false;
+  slot.nearMissDone = false;
 }
 
 // ---------- Input: keyboard, mouse, virtual joystick (touch) ----------
@@ -383,15 +475,19 @@ canvas.addEventListener('touchcancel', joyEnd, { passive: true });
 
 window.addEventListener('keydown', (e) => {
   keys.add(e.code);
-  if ((e.code === 'Space' || e.code === 'Enter') && state !== 'playing') {
+  if ((e.code === 'Space' || e.code === 'Enter') && (state === 'idle' || state === 'gameover')) {
     e.preventDefault();
     startGame();
+  }
+  if (e.code === 'Escape') {
+    if (state === 'playing') pauseGame();
+    else if (state === 'paused') resumeGame();
   }
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 
 // ---------- Game state ----------
-let state = 'idle'; // idle | playing | gameover
+let state = 'idle'; // idle | playing | paused | gameover
 let shipX = 0, shipY = 0, shipZ = 0;
 let speed = BASE_SPEED;
 let score = 0;
@@ -402,7 +498,34 @@ let hudPulseT = 0;
 let shieldCharges = 0;
 let magnetUntil = 0;
 let multUntil = 0;
-let best = Number(localStorage.getItem('novaDriftBest') || 0);
+
+// ---------- Local top-5 leaderboard ----------
+function loadScores() {
+  try {
+    const raw = localStorage.getItem('novaDriftScores');
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore malformed storage */ }
+  const legacyBest = Number(localStorage.getItem('novaDriftBest') || 0);
+  return legacyBest > 0 ? [legacyBest] : [];
+}
+function saveScore(s) {
+  const list = loadScores();
+  list.push(Math.floor(s));
+  list.sort((a, b) => b - a);
+  const top5 = list.slice(0, 5);
+  localStorage.setItem('novaDriftScores', JSON.stringify(top5));
+  return top5;
+}
+function renderLeaderboard(list) {
+  const html = list.length
+    ? list.map((s, i) => `<div class="lbRow"><span>${i + 1}.</span><span>${s}</span></div>`).join('')
+    : '<div class="lbRow lbEmpty">henüz skor yok</div>';
+  leaderboardStartEl.innerHTML = html;
+  leaderboardEndEl.innerHTML = html;
+}
+
+let scores = loadScores();
+let best = scores[0] || 0;
 
 const hud = document.getElementById('hud');
 const scoreEl = document.getElementById('score');
@@ -410,12 +533,22 @@ const bestEl = document.getElementById('best');
 const powerupsEl = document.getElementById('powerups');
 const startScreen = document.getElementById('startScreen');
 const gameOverScreen = document.getElementById('gameOverScreen');
+const pauseScreen = document.getElementById('pauseScreen');
 const finalScoreEl = document.getElementById('finalScore');
 const newBestEl = document.getElementById('newBest');
+const leaderboardStartEl = document.getElementById('leaderboardStart');
+const leaderboardEndEl = document.getElementById('leaderboardEnd');
+const pauseBtn = document.getElementById('pauseBtn');
 document.getElementById('startBtn').addEventListener('click', () => { sfx.click(); startGame(); });
 document.getElementById('restartBtn').addEventListener('click', () => { sfx.click(); startGame(); });
+document.getElementById('resumeBtn').addEventListener('click', () => { sfx.click(); resumeGame(); });
+pauseBtn.addEventListener('click', () => {
+  if (state === 'playing') pauseGame();
+  else if (state === 'paused') resumeGame();
+});
 
 bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
+renderLeaderboard(scores);
 
 function refreshPowerupHud() {
   const chips = [];
@@ -446,15 +579,19 @@ function startGame() {
   magnetUntil = 0;
   multUntil = 0;
   hudPulseT = 0;
+  shakeT = 0;
   shipGroup.rotation.set(0, 0, 0);
   obstacles.forEach(resetPoolMesh);
   orbs.forEach(resetPoolMesh);
   powerups.forEach(resetPoolMesh);
+  trailData.forEach((p) => (p.life = 0));
   rings.forEach((ring, i) => (ring.position.z = -i * RING_SPACING));
   startScreen.classList.add('hidden');
   gameOverScreen.classList.add('hidden');
+  pauseScreen.classList.add('hidden');
   newBestEl.classList.add('hidden');
   hud.classList.add('visible');
+  pauseBtn.classList.add('visible');
   refreshPowerupHud();
   sfx.engineStart();
 }
@@ -462,17 +599,37 @@ function startGame() {
 function endGame() {
   state = 'gameover';
   hud.classList.remove('visible');
+  pauseBtn.classList.remove('visible');
   finalScoreEl.textContent = Math.floor(score);
-  if (score > best) {
-    best = score;
-    localStorage.setItem('novaDriftBest', String(Math.floor(best)));
-    newBestEl.classList.remove('hidden');
-  }
+  const wasNewBest = score > best;
+  scores = saveScore(score);
+  best = scores[0] || 0;
+  if (wasNewBest) newBestEl.classList.remove('hidden');
   bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
+  renderLeaderboard(scores);
   gameOverScreen.classList.remove('hidden');
+  triggerShake(0.3, 0.15);
+  flash('#ff3b3b');
   sfx.crash();
   sfx.engineStop();
   joyEnd();
+}
+
+function pauseGame() {
+  if (state !== 'playing') return;
+  state = 'paused';
+  hud.classList.remove('visible');
+  pauseScreen.classList.remove('hidden');
+  sfx.engineStop();
+  joyEnd();
+}
+
+function resumeGame() {
+  if (state !== 'paused') return;
+  state = 'playing';
+  pauseScreen.classList.add('hidden');
+  hud.classList.add('visible');
+  sfx.engineStart();
 }
 
 // ---------- Main loop ----------
@@ -539,16 +696,23 @@ function updatePlaying(dt) {
     if (o.z > shipZ + RECYCLE_MARGIN) { resetPoolMesh(o); continue; }
     if (Math.abs(o.z - shipZ) < 0.85) {
       const dx = o.x - shipX, dy = o.y - shipY;
-      if (Math.hypot(dx, dy) < COLLIDE_RADIUS) {
+      const dist = Math.hypot(dx, dy);
+      if (dist < COLLIDE_RADIUS) {
         if (shieldCharges > 0) {
           shieldCharges--;
           resetPoolMesh(o);
           sfx.shieldHit();
+          triggerShake(0.16, 0.22);
+          flash('#6dff9e');
           refreshPowerupHud();
           continue;
         }
         endGame();
         return;
+      } else if (!o.nearMissDone && dist < NEAR_MISS_RADIUS) {
+        o.nearMissDone = true;
+        score += NEAR_MISS_BONUS * mult;
+        sfx.nearMiss();
       }
     }
   }
@@ -613,6 +777,15 @@ function updatePlaying(dt) {
   camera.position.z += (camTargetZ - camera.position.z) * Math.min(1, dt * 5);
   camera.lookAt(shipX, shipY, shipZ - 6);
   camera.rotation.z += (-velX * 0.05 - camera.rotation.z) * Math.min(1, dt * 4);
+
+  if (shakeT > 0) {
+    shakeT -= dt;
+    const s = shakeMag * Math.max(0, shakeT);
+    camera.position.x += (Math.random() - 0.5) * s;
+    camera.position.y += (Math.random() - 0.5) * s;
+  }
+
+  updateTrail(dt);
 }
 
 function idleDrift(t) {
@@ -630,7 +803,7 @@ function animate() {
   starMat.uniforms.uTime.value = t;
 
   if (state === 'playing') updatePlaying(dt);
-  else idleDrift(t);
+  else if (state !== 'paused') idleDrift(t);
 
   composer.render();
   requestAnimationFrame(animate);

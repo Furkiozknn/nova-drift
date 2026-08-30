@@ -22,8 +22,10 @@
 </head>
 <body>
 <canvas id="scene"></canvas>
+<div id="hitFlash" aria-hidden="true"></div>
 
 <button id="muteBtn" aria-label="Sesi kapat/aç">🔊</button>
+<button id="pauseBtn" aria-label="Duraklat">⏸</button>
 
 <div id="hud">
   <div id="score">0</div>
@@ -41,6 +43,7 @@
   <div class="controls">
     <span>🖱️ / 👆 sürükle</span>
     <span>⌨️ ok tuşları · WASD</span>
+    <span class="escHint">⏸ ESC duraklat</span>
   </div>
   <p class="legend"><span class="dot orb"></span> topla &nbsp; <span class="dot rock"></span> kaçın</p>
   <div class="legend powerlegend">
@@ -49,6 +52,7 @@
     <img class="icon" src="assets/icon_mult.png" alt=""> x2 puan
   </div>
   <button id="startBtn">BAŞLA</button>
+  <div id="leaderboardStart" class="leaderboard"></div>
 </div>
 
 <div id="gameOverScreen" class="overlay hidden">
@@ -56,6 +60,12 @@
   <div id="finalScore">0</div>
   <p id="newBest" class="hidden">yeni rekor!</p>
   <button id="restartBtn">TEKRAR DENE</button>
+  <div id="leaderboardEnd" class="leaderboard"></div>
+</div>
+
+<div id="pauseScreen" class="overlay hidden">
+  <h2 class="pauseTitle">DURAKLATILDI</h2>
+  <button id="resumeBtn">DEVAM ET</button>
 </div>
 
 <script type="module" src="script.js"></script>
