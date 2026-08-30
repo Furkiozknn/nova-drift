@@ -15,6 +15,8 @@ renderer.toneMappingExposure = 0.98;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x05020c, 0.045);
+scene.background = new THREE.TextureLoader().load('assets/nebula.png');
+scene.background.colorSpace = THREE.SRGBColorSpace;
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
 
@@ -233,18 +235,11 @@ for (let i = 0; i < RING_COUNT; i++) {
 
 // ---------- Player ship ----------
 const shipGroup = new THREE.Group();
-const shipCore = new THREE.Mesh(
-  new THREE.IcosahedronGeometry(0.3, 1),
-  new THREE.MeshBasicMaterial({ color: 0x9fd6ff, toneMapped: false })
-);
-shipGroup.add(shipCore);
-const engineGeo = new THREE.SphereGeometry(0.09, 8, 8);
-const engineMat = new THREE.MeshBasicMaterial({ color: 0x7ee8ff, toneMapped: false });
-const engineL = new THREE.Mesh(engineGeo, engineMat);
-engineL.position.set(-0.2, -0.05, 0.28);
-const engineR = engineL.clone();
-engineR.position.x = 0.2;
-shipGroup.add(engineL, engineR);
+const shipTexture = new THREE.TextureLoader().load('assets/ship.png');
+shipTexture.colorSpace = THREE.SRGBColorSpace;
+const shipSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: shipTexture, transparent: true, toneMapped: false }));
+shipSprite.scale.set(1.5, 1.5, 1);
+shipGroup.add(shipSprite);
 const shieldRing = new THREE.Mesh(
   new THREE.TorusGeometry(0.56, 0.035, 8, 32),
   new THREE.MeshBasicMaterial({ color: 0x6dff9e, toneMapped: false, transparent: true, opacity: 0.85 })
@@ -513,9 +508,8 @@ function updatePlaying(dt) {
   const velY = (shipY - prevY) / Math.max(dt, 0.0001);
 
   shipGroup.position.set(shipX, shipY, shipZ);
-  shipGroup.rotation.z = THREE.MathUtils.clamp(-velX * 0.09, -0.6, 0.6);
   shipGroup.rotation.x = THREE.MathUtils.clamp(velY * 0.06, -0.4, 0.4);
-  shipCore.rotation.y += dt * 2.2;
+  shipSprite.material.rotation = THREE.MathUtils.clamp(velX * 0.11, -0.5, 0.5);
   shieldRing.visible = shieldCharges > 0;
   if (shieldRing.visible) shieldRing.rotation.z += dt * 1.6;
 
