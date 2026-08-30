@@ -48,6 +48,124 @@ const MAX_SPEED = 27;
 const SPEED_RAMP = 0.14;
 const COLLIDE_RADIUS = 0.72;
 const ORB_RADIUS = 0.85;
+const MAGNET_RADIUS = 4.5;
+const SHIELD_MAX = 2;
+const MAGNET_DURATION = 6;
+const MULT_DURATION = 8;
+
+// ---------- Audio (synthesized with Web Audio API - no external files) ----------
+const sfx = (() => {
+  let ctx = null;
+  let master = null;
+  let engineOsc = null, engineGain = null, engineFilter = null;
+  let muted = localStorage.getItem('novaDriftMuted') === '1';
+
+  function ensure() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain();
+      master.gain.value = muted ? 0 : 0.45;
+      master.connect(ctx.destination);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function tone(freq, dur, type, startGain, delay = 0) {
+    const c = ensure();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.connect(gain).connect(master);
+    const t0 = c.currentTime + delay;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(startGain, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.03);
+  }
+
+  function collect() {
+    tone(880, 0.12, 'sine', 0.28);
+    tone(1320, 0.15, 'sine', 0.2, 0.05);
+  }
+
+  function power() {
+    tone(660, 0.1, 'triangle', 0.26);
+    tone(880, 0.1, 'triangle', 0.22, 0.08);
+    tone(1180, 0.18, 'triangle', 0.2, 0.16);
+  }
+
+  function shieldHit() {
+    tone(220, 0.09, 'square', 0.3);
+    tone(150, 0.14, 'square', 0.24, 0.03);
+  }
+
+  function crash() {
+    const c = ensure();
+    const bufferSize = Math.floor(c.sampleRate * 0.35);
+    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    const noise = c.createBufferSource();
+    noise.buffer = buffer;
+    const filter = c.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 900;
+    const gain = c.createGain();
+    gain.gain.value = 0.5;
+    noise.connect(filter).connect(gain).connect(master);
+    noise.start();
+    tone(90, 0.32, 'sawtooth', 0.35);
+  }
+
+  function click() {
+    tone(520, 0.06, 'square', 0.15);
+  }
+
+  function engineStart() {
+    const c = ensure();
+    if (engineOsc) return;
+    engineOsc = c.createOscillator();
+    engineOsc.type = 'sawtooth';
+    engineOsc.frequency.value = 55;
+    engineFilter = c.createBiquadFilter();
+    engineFilter.type = 'lowpass';
+    engineFilter.frequency.value = 220;
+    engineGain = c.createGain();
+    engineGain.gain.value = 0.025;
+    engineOsc.connect(engineFilter).connect(engineGain).connect(master);
+    engineOsc.start();
+  }
+  function engineSet(speed) {
+    if (engineOsc) engineOsc.frequency.setTargetAtTime(55 + speed * 2.2, ctx.currentTime, 0.15);
+  }
+  function engineStop() {
+    if (engineOsc) {
+      engineOsc.stop();
+      engineOsc.disconnect();
+      engineOsc = null;
+      engineGain = null;
+    }
+  }
+
+  function setMuted(m) {
+    muted = m;
+    localStorage.setItem('novaDriftMuted', m ? '1' : '0');
+    if (master) master.gain.value = m ? 0 : 0.45;
+  }
+  function isMuted() { return muted; }
+
+  return { collect, power, shieldHit, crash, click, engineStart, engineSet, engineStop, setMuted, isMuted };
+})();
+
+const muteBtn = document.getElementById('muteBtn');
+muteBtn.textContent = sfx.isMuted() ? '🔇' : '🔊';
+muteBtn.addEventListener('click', () => {
+  sfx.setMuted(!sfx.isMuted());
+  muteBtn.textContent = sfx.isMuted() ? '🔇' : '🔊';
+});
 
 // ---------- Starfield ----------
 const STAR_COUNT = 700;
@@ -122,16 +240,22 @@ engineL.position.set(-0.2, -0.05, 0.28);
 const engineR = engineL.clone();
 engineR.position.x = 0.2;
 shipGroup.add(engineL, engineR);
+const shieldRing = new THREE.Mesh(
+  new THREE.TorusGeometry(0.56, 0.035, 8, 32),
+  new THREE.MeshBasicMaterial({ color: 0x6dff9e, toneMapped: false, transparent: true, opacity: 0.85 })
+);
+shieldRing.visible = false;
+shipGroup.add(shieldRing);
 scene.add(shipGroup);
 
-// ---------- Obstacle / orb pools ----------
+// ---------- Obstacle / orb / power-up pools ----------
 function makePool(count, geo, mat) {
   const pool = [];
   for (let i = 0; i < count; i++) {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.visible = false;
     scene.add(mesh);
-    pool.push({ mesh, active: false, z: 0, x: 0, y: 0, kind: null });
+    pool.push({ mesh, active: false, z: 0, x: 0, y: 0 });
   }
   return pool;
 }
@@ -142,6 +266,27 @@ const obstacles = makePool(OBSTACLE_POOL, obstacleGeo, obstacleMat);
 const orbGeo = new THREE.SphereGeometry(0.24, 12, 12);
 const orbMat = new THREE.MeshBasicMaterial({ color: 0x7ee8ff, toneMapped: false });
 const orbs = makePool(ORB_POOL, orbGeo, orbMat);
+
+const POWERUP_GEO = {
+  shield: new THREE.TorusGeometry(0.3, 0.075, 8, 20),
+  magnet: new THREE.OctahedronGeometry(0.3, 0),
+  mult: new THREE.TetrahedronGeometry(0.34, 0),
+};
+const POWERUP_MAT = {
+  shield: new THREE.MeshBasicMaterial({ color: 0x6dff9e, toneMapped: false }),
+  magnet: new THREE.MeshBasicMaterial({ color: 0xc98bff, toneMapped: false }),
+  mult: new THREE.MeshBasicMaterial({ color: 0xffd76d, toneMapped: false }),
+};
+const POWERUP_TYPES = ['shield', 'magnet', 'mult'];
+const powerups = [];
+for (const type of POWERUP_TYPES) {
+  for (let i = 0; i < 3; i++) {
+    const mesh = new THREE.Mesh(POWERUP_GEO[type], POWERUP_MAT[type]);
+    mesh.visible = false;
+    scene.add(mesh);
+    powerups.push({ mesh, active: false, z: 0, x: 0, y: 0, type });
+  }
+}
 
 function spawnFrom(pool, atZ) {
   const slot = pool.find((s) => !s.active);
@@ -157,8 +302,29 @@ function spawnFrom(pool, atZ) {
   slot.mesh.position.set(slot.x, slot.y, slot.z);
   slot.mesh.scale.setScalar(1);
 }
+function spawnPowerup(atZ) {
+  const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+  const candidates = powerups.filter((s) => !s.active && s.type === type);
+  const slot = candidates[0] || powerups.find((s) => !s.active);
+  if (!slot) return;
+  const angle = Math.random() * Math.PI * 2;
+  const r = Math.random() * PLAY_RADIUS * 0.8;
+  slot.x = Math.cos(angle) * r;
+  slot.y = Math.sin(angle) * r;
+  slot.z = atZ;
+  slot.active = true;
+  slot.spawnT = 0;
+  slot.mesh.visible = true;
+  slot.mesh.position.set(slot.x, slot.y, slot.z);
+  slot.mesh.scale.setScalar(1);
+}
 
-// ---------- Input ----------
+function resetPoolMesh(slot) {
+  slot.active = false;
+  slot.mesh.visible = false;
+}
+
+// ---------- Input: keyboard, mouse, virtual joystick (touch) ----------
 const target = { x: 0, y: 0 };
 const keys = new Set();
 function pointerToTarget(clientX, clientY) {
@@ -168,15 +334,58 @@ function pointerToTarget(clientX, clientY) {
   target.y = THREE.MathUtils.clamp(-ny * PLAY_RADIUS, -PLAY_RADIUS, PLAY_RADIUS);
 }
 window.addEventListener('mousemove', (e) => pointerToTarget(e.clientX, e.clientY));
-window.addEventListener('touchmove', (e) => {
+
+const joystickEl = document.getElementById('joystick');
+const joystickKnob = document.getElementById('joystickKnob');
+const JOY_MAX = 55;
+let joyActive = false;
+const joyBase = { x: 0, y: 0 };
+const joyVec = { x: 0, y: 0 };
+
+function joyStart(clientX, clientY) {
+  joyActive = true;
+  joyBase.x = clientX;
+  joyBase.y = clientY;
+  joystickEl.style.left = clientX + 'px';
+  joystickEl.style.top = clientY + 'px';
+  joystickEl.classList.remove('hidden');
+  joystickKnob.style.transform = 'translate(-50%, -50%)';
+}
+function joyMove(clientX, clientY) {
+  if (!joyActive) return;
+  let dx = clientX - joyBase.x;
+  let dy = clientY - joyBase.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist > JOY_MAX) {
+    dx = (dx / dist) * JOY_MAX;
+    dy = (dy / dist) * JOY_MAX;
+  }
+  joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  joyVec.x = dx / JOY_MAX;
+  joyVec.y = dy / JOY_MAX;
+}
+function joyEnd() {
+  joyActive = false;
+  joyVec.x = 0;
+  joyVec.y = 0;
+  joystickEl.classList.add('hidden');
+}
+canvas.addEventListener('touchstart', (e) => {
   const t = e.touches[0];
-  if (t) pointerToTarget(t.clientX, t.clientY);
+  if (t) joyStart(t.clientX, t.clientY);
 }, { passive: true });
+canvas.addEventListener('touchmove', (e) => {
+  const t = e.touches[0];
+  if (t) joyMove(t.clientX, t.clientY);
+}, { passive: true });
+canvas.addEventListener('touchend', joyEnd, { passive: true });
+canvas.addEventListener('touchcancel', joyEnd, { passive: true });
+
 window.addEventListener('keydown', (e) => {
   keys.add(e.code);
   if ((e.code === 'Space' || e.code === 'Enter') && state !== 'playing') {
     e.preventDefault();
-    state === 'idle' ? startGame() : startGame();
+    startGame();
   }
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
@@ -189,23 +398,39 @@ let score = 0;
 let survivedT = 0;
 let distSinceSpawn = 0;
 let nextSpawnAt = 2.2;
+let hudPulseT = 0;
+let shieldCharges = 0;
+let magnetUntil = 0;
+let multUntil = 0;
 let best = Number(localStorage.getItem('novaDriftBest') || 0);
 
 const hud = document.getElementById('hud');
 const scoreEl = document.getElementById('score');
 const bestEl = document.getElementById('best');
+const powerupsEl = document.getElementById('powerups');
 const startScreen = document.getElementById('startScreen');
 const gameOverScreen = document.getElementById('gameOverScreen');
 const finalScoreEl = document.getElementById('finalScore');
 const newBestEl = document.getElementById('newBest');
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('restartBtn').addEventListener('click', startGame);
+document.getElementById('startBtn').addEventListener('click', () => { sfx.click(); startGame(); });
+document.getElementById('restartBtn').addEventListener('click', () => { sfx.click(); startGame(); });
 
 bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
 
-function resetPoolMesh(slot) {
-  slot.active = false;
-  slot.mesh.visible = false;
+function refreshPowerupHud() {
+  const chips = [];
+  if (shieldCharges > 0) chips.push(`<span class="powerchip"><span class="dot shield"></span>KALKAN x${shieldCharges}</span>`);
+  if (survivedT < magnetUntil) chips.push(`<span class="powerchip"><span class="dot magnet"></span>MIKNATIS ${Math.ceil(magnetUntil - survivedT)}s</span>`);
+  if (survivedT < multUntil) chips.push(`<span class="powerchip"><span class="dot mult"></span>x2 ${Math.ceil(multUntil - survivedT)}s</span>`);
+  powerupsEl.innerHTML = chips.join('');
+}
+
+function applyPowerup(type) {
+  sfx.power();
+  if (type === 'shield') shieldCharges = Math.min(shieldCharges + 1, SHIELD_MAX);
+  else if (type === 'magnet') magnetUntil = survivedT + MAGNET_DURATION;
+  else if (type === 'mult') multUntil = survivedT + MULT_DURATION;
+  refreshPowerupHud();
 }
 
 function startGame() {
@@ -217,13 +442,19 @@ function startGame() {
   survivedT = 0;
   distSinceSpawn = 0;
   nextSpawnAt = 2.2;
+  shieldCharges = 0;
+  magnetUntil = 0;
+  multUntil = 0;
   obstacles.forEach(resetPoolMesh);
   orbs.forEach(resetPoolMesh);
+  powerups.forEach(resetPoolMesh);
   rings.forEach((ring, i) => (ring.position.z = -i * RING_SPACING));
   startScreen.classList.add('hidden');
   gameOverScreen.classList.add('hidden');
   newBestEl.classList.add('hidden');
   hud.classList.add('visible');
+  refreshPowerupHud();
+  sfx.engineStart();
 }
 
 function endGame() {
@@ -237,6 +468,9 @@ function endGame() {
   }
   bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
   gameOverScreen.classList.remove('hidden');
+  sfx.crash();
+  sfx.engineStop();
+  joyEnd();
 }
 
 // ---------- Main loop ----------
@@ -246,15 +480,21 @@ function updatePlaying(dt) {
   survivedT += dt;
   speed = Math.min(MAX_SPEED, BASE_SPEED + survivedT * SPEED_RAMP);
   shipZ -= speed * dt;
-  score += speed * dt * 1.1;
+  const mult = survivedT < multUntil ? 2 : 1;
+  score += speed * dt * 1.1 * mult;
   scoreEl.textContent = Math.floor(score);
+  sfx.engineSet(speed);
 
-  // keyboard nudges the target continuously
+  // keyboard + joystick nudge the target continuously
   const kSpeed = 3.6;
   if (keys.has('ArrowLeft') || keys.has('KeyA')) target.x -= kSpeed * dt;
   if (keys.has('ArrowRight') || keys.has('KeyD')) target.x += kSpeed * dt;
   if (keys.has('ArrowUp') || keys.has('KeyW')) target.y += kSpeed * dt;
   if (keys.has('ArrowDown') || keys.has('KeyS')) target.y -= kSpeed * dt;
+  if (joyActive) {
+    target.x += joyVec.x * kSpeed * dt;
+    target.y -= joyVec.y * kSpeed * dt;
+  }
   target.x = THREE.MathUtils.clamp(target.x, -PLAY_RADIUS, PLAY_RADIUS);
   target.y = THREE.MathUtils.clamp(target.y, -PLAY_RADIUS, PLAY_RADIUS);
 
@@ -269,6 +509,8 @@ function updatePlaying(dt) {
   shipGroup.rotation.z = THREE.MathUtils.clamp(-velX * 0.09, -0.6, 0.6);
   shipGroup.rotation.x = THREE.MathUtils.clamp(velY * 0.06, -0.4, 0.4);
   shipCore.rotation.y += dt * 2.2;
+  shieldRing.visible = shieldCharges > 0;
+  if (shieldRing.visible) shieldRing.rotation.z += dt * 1.6;
 
   // recycle rings
   for (const ring of rings) {
@@ -277,16 +519,18 @@ function updatePlaying(dt) {
     }
   }
 
-  // spawn obstacles/orbs based on distance traveled
+  // spawn obstacles / orbs / power-ups based on distance traveled
   distSinceSpawn += speed * dt;
   if (distSinceSpawn > nextSpawnAt) {
     distSinceSpawn = 0;
     nextSpawnAt = 1.7 + Math.random() * 1.1;
-    const pool = Math.random() < 0.5 ? obstacles : orbs;
-    spawnFrom(pool, shipZ - SPAWN_AHEAD);
+    const r = Math.random();
+    if (r < 0.46) spawnFrom(obstacles, shipZ - SPAWN_AHEAD);
+    else if (r < 0.88) spawnFrom(orbs, shipZ - SPAWN_AHEAD);
+    else spawnPowerup(shipZ - SPAWN_AHEAD);
   }
 
-  // update obstacles: recycle or collide
+  // update obstacles: recycle, shield-absorb, or collide
   for (const o of obstacles) {
     if (!o.active) continue;
     o.mesh.rotation.x += dt * 1.4;
@@ -294,25 +538,70 @@ function updatePlaying(dt) {
     if (o.z > shipZ + RECYCLE_MARGIN) { resetPoolMesh(o); continue; }
     if (Math.abs(o.z - shipZ) < 0.85) {
       const dx = o.x - shipX, dy = o.y - shipY;
-      if (Math.hypot(dx, dy) < COLLIDE_RADIUS) { endGame(); return; }
+      if (Math.hypot(dx, dy) < COLLIDE_RADIUS) {
+        if (shieldCharges > 0) {
+          shieldCharges--;
+          resetPoolMesh(o);
+          sfx.shieldHit();
+          refreshPowerupHud();
+          continue;
+        }
+        endGame();
+        return;
+      }
     }
   }
 
-  // update orbs: recycle, collect, or pulse
+  // update orbs: magnet pull, recycle, collect, or pulse
+  const magnetOn = survivedT < magnetUntil;
   for (const orb of orbs) {
     if (!orb.active) continue;
     orb.spawnT += dt;
     const pulse = 1 + Math.sin(orb.spawnT * 6) * 0.12;
+
+    if (magnetOn) {
+      const dx = shipX - orb.x, dy = shipY - orb.y, dz = shipZ - orb.z;
+      const dist = Math.hypot(dx, dy, dz);
+      if (dist < MAGNET_RADIUS && dist > 0.001) {
+        const pull = Math.min(1, dt * 6);
+        orb.x += dx * pull;
+        orb.y += dy * pull;
+        orb.z += dz * pull;
+      }
+    }
+    orb.mesh.position.set(orb.x, orb.y, orb.z);
     orb.mesh.scale.setScalar(pulse);
+
     if (orb.z > shipZ + RECYCLE_MARGIN) { resetPoolMesh(orb); continue; }
     if (Math.abs(orb.z - shipZ) < 0.9) {
       const dx = orb.x - shipX, dy = orb.y - shipY;
       if (Math.hypot(dx, dy) < ORB_RADIUS) {
-        score += 45;
+        score += 45 * mult;
+        sfx.collect();
         resetPoolMesh(orb);
       }
     }
   }
+
+  // update power-ups: recycle, collect
+  for (const p of powerups) {
+    if (!p.active) continue;
+    p.spawnT += dt;
+    p.mesh.rotation.y += dt * 2;
+    p.mesh.rotation.x += dt * 1.3;
+    p.mesh.scale.setScalar(1 + Math.sin(p.spawnT * 5) * 0.12);
+    if (p.z > shipZ + RECYCLE_MARGIN) { resetPoolMesh(p); continue; }
+    if (Math.abs(p.z - shipZ) < 0.9) {
+      const dx = p.x - shipX, dy = p.y - shipY;
+      if (Math.hypot(dx, dy) < ORB_RADIUS) {
+        applyPowerup(p.type);
+        resetPoolMesh(p);
+      }
+    }
+  }
+
+  hudPulseT += dt;
+  if (hudPulseT > 0.2) { hudPulseT = 0; refreshPowerupHud(); }
 
   // chase camera with a bit of lag + bank
   const camTargetX = shipX * 0.55;

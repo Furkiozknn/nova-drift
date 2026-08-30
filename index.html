@@ -23,9 +23,16 @@
 <body>
 <canvas id="scene"></canvas>
 
+<button id="muteBtn" aria-label="Sesi kapat/aç">🔊</button>
+
 <div id="hud">
   <div id="score">0</div>
   <div id="best">EN İYİ: 0</div>
+  <div id="powerups"></div>
+</div>
+
+<div id="joystick" class="hidden">
+  <div id="joystickKnob"></div>
 </div>
 
 <div id="startScreen" class="overlay">
@@ -36,6 +43,11 @@
     <span>⌨️ ok tuşları · WASD</span>
   </div>
   <p class="legend"><span class="dot orb"></span> topla &nbsp; <span class="dot rock"></span> kaçın</p>
+  <div class="legend powerlegend">
+    <span class="dot shield"></span> kalkan &nbsp;
+    <span class="dot magnet"></span> mıknatıs &nbsp;
+    <span class="dot mult"></span> x2 puan
+  </div>
   <button id="startBtn">BAŞLA</button>
 </div>
 
