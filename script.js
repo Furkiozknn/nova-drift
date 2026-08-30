@@ -419,9 +419,9 @@ bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
 
 function refreshPowerupHud() {
   const chips = [];
-  if (shieldCharges > 0) chips.push(`<span class="powerchip"><span class="dot shield"></span>KALKAN x${shieldCharges}</span>`);
-  if (survivedT < magnetUntil) chips.push(`<span class="powerchip"><span class="dot magnet"></span>MIKNATIS ${Math.ceil(magnetUntil - survivedT)}s</span>`);
-  if (survivedT < multUntil) chips.push(`<span class="powerchip"><span class="dot mult"></span>x2 ${Math.ceil(multUntil - survivedT)}s</span>`);
+  if (shieldCharges > 0) chips.push(`<span class="powerchip"><img class="icon" src="assets/icon_shield.png" alt="">KALKAN x${shieldCharges}</span>`);
+  if (survivedT < magnetUntil) chips.push(`<span class="powerchip"><img class="icon" src="assets/icon_magnet.png" alt="">MIKNATIS ${Math.ceil(magnetUntil - survivedT)}s</span>`);
+  if (survivedT < multUntil) chips.push(`<span class="powerchip"><img class="icon" src="assets/icon_mult.png" alt="">x2 ${Math.ceil(multUntil - survivedT)}s</span>`);
   powerupsEl.innerHTML = chips.join('');
 }
 

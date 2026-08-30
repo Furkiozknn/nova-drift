@@ -69,10 +69,14 @@ canvas {
   background: rgba(10, 6, 18, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
-.powerchip .dot { margin-right: 0; }
-.dot.shield { background: #6dff9e; box-shadow: 0 0 10px #6dff9e; }
-.dot.magnet { background: #c98bff; box-shadow: 0 0 10px #c98bff; }
-.dot.mult   { background: #ffd76d; box-shadow: 0 0 10px #ffd76d; }
+.powerchip .icon { margin-right: 0; }
+.icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  mix-blend-mode: screen;
+  object-fit: contain;
+}
 
 /* ---------- Mute button ---------- */
 #muteBtn {
