@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="Nova Drift — bir ışık tünelinde engellerden kaçıp enerji küreleri topladığın hızlı bir uzay koşusu.">
+<meta name="theme-color" content="#05020c">
+<title>Nova Drift</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext x='16' y='24' font-size='24' text-anchor='middle'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div id="hud">
+  <div id="score">0</div>
+  <div id="best">EN İYİ: 0</div>
+</div>
+
+<div id="startScreen" class="overlay">
+  <h1>NOVA DRIFT</h1>
+  <p class="tagline">bir ışık tünelinde hayatta kal</p>
+  <div class="controls">
+    <span>🖱️ / 👆 sürükle</span>
+    <span>⌨️ ok tuşları · WASD</span>
+  </div>
+  <p class="legend"><span class="dot orb"></span> topla &nbsp; <span class="dot rock"></span> kaçın</p>
+  <button id="startBtn">BAŞLA</button>
+</div>
+
+<div id="gameOverScreen" class="overlay hidden">
+  <h2>ÇARPIŞMA</h2>
+  <div id="finalScore">0</div>
+  <p id="newBest" class="hidden">yeni rekor!</p>
+  <button id="restartBtn">TEKRAR DENE</button>
+</div>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
