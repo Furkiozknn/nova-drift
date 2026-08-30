@@ -44,3 +44,7 @@ Needs to be served over HTTP (not opened via `file://`) since it loads Three.js 
 ## 📦 Stack
 
 Plain HTML/CSS/JS, Three.js via import map from a CDN — no build step.
+
+## 📄 License
+
+MIT
