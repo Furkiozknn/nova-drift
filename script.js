@@ -26,11 +26,13 @@ composer.addPass(new OutputPass());
 
 function onResize() {
   const w = window.innerWidth, h = window.innerHeight;
+  if (w === 0 || h === 0) return;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
   composer.setSize(w, h);
   bloomPass.resolution.set(w, h);
+  starMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
 }
 window.addEventListener('resize', onResize);
 
@@ -145,8 +147,11 @@ const sfx = (() => {
     if (engineOsc) {
       engineOsc.stop();
       engineOsc.disconnect();
+      engineFilter.disconnect();
+      engineGain.disconnect();
       engineOsc = null;
       engineGain = null;
+      engineFilter = null;
     }
   }
 
@@ -445,6 +450,8 @@ function startGame() {
   shieldCharges = 0;
   magnetUntil = 0;
   multUntil = 0;
+  hudPulseT = 0;
+  shipGroup.rotation.set(0, 0, 0);
   obstacles.forEach(resetPoolMesh);
   orbs.forEach(resetPoolMesh);
   powerups.forEach(resetPoolMesh);
