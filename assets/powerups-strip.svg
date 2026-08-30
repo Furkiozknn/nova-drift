@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 440" width="1200" height="440">
+  <defs>
+    <radialGradient id="pbg" cx="50%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#150a24"/>
+      <stop offset="55%" stop-color="#0a0514"/>
+      <stop offset="100%" stop-color="#05020c"/>
+    </radialGradient>
+    <linearGradient id="pTitle" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffe7c2"/>
+      <stop offset="50%" stop-color="#ffb3d9"/>
+      <stop offset="100%" stop-color="#a5d9ff"/>
+    </linearGradient>
+    <filter id="pGlowS" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="pGlowM" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="cardStroke" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05"/>
+    </linearGradient>
+    <radialGradient id="shieldGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6dff9e" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#6dff9e" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="magnetGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c98bff" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#c98bff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="multGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffd76d" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ffd76d" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="440" fill="url(#pbg)"/>
+  <g fill="#ffffff" opacity="0.55">
+    <circle cx="40" cy="30" r="1.1"/><circle cx="1160" cy="36" r="1.1"/>
+    <circle cx="600" cy="20" r="1"/><circle cx="90" cy="410" r="1"/><circle cx="1110" cy="404" r="1"/>
+  </g>
+
+  <text x="600" y="46" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="700" font-size="28" fill="url(#pTitle)" letter-spacing="3">POWER-UPS</text>
+  <text x="600" y="70" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13.5" fill="#c9b8d6" letter-spacing="1.5" opacity="0.85">three pickups spawn alongside obstacles and orbs &#8212; grab them mid-flight</text>
+
+  <!-- ============ CARD TEMPLATE x3 ============ -->
+  <!-- Shield -->
+  <g transform="translate(70,100)">
+    <rect width="340" height="310" rx="18" fill="#0d0718" stroke="url(#cardStroke)" stroke-width="1.4"/>
+    <circle cx="170" cy="118" r="90" fill="url(#shieldGlow)"/>
+    <g filter="url(#pGlowM)">
+      <circle cx="170" cy="118" r="58" fill="none" stroke="#6dff9e" stroke-width="9"/>
+    </g>
+    <circle cx="170" cy="118" r="58" fill="none" stroke="#eafff2" stroke-width="2.5" opacity="0.9"/>
+    <g filter="url(#pGlowS)" opacity="0.9">
+      <circle cx="170" cy="118" r="30" fill="none" stroke="#6dff9e" stroke-width="3"/>
+    </g>
+    <text x="170" y="230" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="700" font-size="22" fill="#eafff2" letter-spacing="2">SHIELD</text>
+    <text x="170" y="256" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#a9c9b6">absorbs one collision instead</text>
+    <text x="170" y="274" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#a9c9b6">of ending the run</text>
+    <rect x="60" y="288" width="220" height="1" fill="#6dff9e" opacity="0.25"/>
+    <text x="170" y="300" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#6dff9e" letter-spacing="1" font-weight="700">STACKS UP TO x2</text>
+  </g>
+
+  <!-- Magnet -->
+  <g transform="translate(430,100)">
+    <rect width="340" height="310" rx="18" fill="#0d0718" stroke="url(#cardStroke)" stroke-width="1.4"/>
+    <circle cx="170" cy="118" r="90" fill="url(#magnetGlow)"/>
+    <g filter="url(#pGlowM)">
+      <polygon points="170,64 224,118 170,172 116,118" fill="none" stroke="#c98bff" stroke-width="8"/>
+    </g>
+    <polygon points="170,64 224,118 170,172 116,118" fill="none" stroke="#f2e5ff" stroke-width="2.5" opacity="0.9"/>
+    <g filter="url(#pGlowS)" opacity="0.85" stroke="#c98bff" stroke-width="2" fill="none">
+      <path d="M132,150 Q170,190 208,150" stroke-dasharray="3 6"/>
+      <path d="M120,130 Q170,178 220,130" stroke-dasharray="3 6" opacity="0.6"/>
+    </g>
+    <text x="170" y="230" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="700" font-size="22" fill="#f2e5ff" letter-spacing="2">MAGNET</text>
+    <text x="170" y="256" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#c3aed6">pulls nearby orbs toward</text>
+    <text x="170" y="274" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#c3aed6">the ship automatically</text>
+    <rect x="60" y="288" width="220" height="1" fill="#c98bff" opacity="0.25"/>
+    <text x="170" y="300" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#c98bff" letter-spacing="1" font-weight="700">LASTS 6 SECONDS</text>
+  </g>
+
+  <!-- x2 Mult -->
+  <g transform="translate(790,100)">
+    <rect width="340" height="310" rx="18" fill="#0d0718" stroke="url(#cardStroke)" stroke-width="1.4"/>
+    <circle cx="170" cy="118" r="90" fill="url(#multGlow)"/>
+    <g filter="url(#pGlowM)">
+      <polygon points="170,60 218,168 122,168" fill="none" stroke="#ffd76d" stroke-width="8"/>
+    </g>
+    <polygon points="170,60 218,168 122,168" fill="none" stroke="#fff3d6" stroke-width="2.5" opacity="0.9"/>
+    <text x="170" y="132" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="900" font-size="34" fill="#fff3d6" filter="url(#pGlowS)">x2</text>
+    <text x="170" y="230" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="700" font-size="22" fill="#fff3d6" letter-spacing="2">DOUBLE SCORE</text>
+    <text x="170" y="256" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#d6c493">doubles distance, orb, and</text>
+    <text x="170" y="274" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#d6c493">near-miss scoring</text>
+    <rect x="60" y="288" width="220" height="1" fill="#ffd76d" opacity="0.25"/>
+    <text x="170" y="300" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#ffd76d" letter-spacing="1" font-weight="700">LASTS 8 SECONDS</text>
+  </g>
+
+  <text x="600" y="424" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#8a7a99" letter-spacing="1">timers run on survival time, so multiple pickups of the same kind simply refresh the clock</text>
+</svg>

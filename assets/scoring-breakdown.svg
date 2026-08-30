@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" width="1200" height="480">
+  <defs>
+    <radialGradient id="sbg" cx="50%" cy="28%" r="85%">
+      <stop offset="0%" stop-color="#150a24"/>
+      <stop offset="55%" stop-color="#0a0514"/>
+      <stop offset="100%" stop-color="#05020c"/>
+    </radialGradient>
+    <linearGradient id="sTitle" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffe7c2"/>
+      <stop offset="50%" stop-color="#ffb3d9"/>
+      <stop offset="100%" stop-color="#a5d9ff"/>
+    </linearGradient>
+    <filter id="sGlowS" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="sGlowM" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="11" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="sCardStroke" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05"/>
+    </linearGradient>
+    <marker id="sArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#e2d4eb"/>
+    </marker>
+    <linearGradient id="ffGold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fff6e6"/>
+      <stop offset="100%" stop-color="#ffd76d"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="480" fill="url(#sbg)"/>
+  <g fill="#ffffff" opacity="0.55">
+    <circle cx="40" cy="28" r="1.1"/><circle cx="1160" cy="34" r="1.1"/>
+    <circle cx="600" cy="18" r="1"/><circle cx="70" cy="450" r="1"/><circle cx="1130" cy="446" r="1"/>
+  </g>
+
+  <text x="600" y="44" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="700" font-size="28" fill="url(#sTitle)" letter-spacing="3">SCORING</text>
+  <text x="600" y="68" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13.5" fill="#c9b8d6" letter-spacing="1.5" opacity="0.85">three sources feed one running total &#8212; every one of them can be doubled</text>
+
+  <!-- three source cards -->
+  <g transform="translate(70,96)">
+    <rect width="290" height="200" rx="16" fill="#0d0718" stroke="url(#sCardStroke)" stroke-width="1.4"/>
+    <g filter="url(#sGlowM)">
+      <path d="M40,150 L80,90 L120,140 L160,60 L200,110 L240,50" fill="none" stroke="#a5d9ff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="145" y="40" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="700" font-size="16" fill="#dcefff" letter-spacing="1.5">DISTANCE</text>
+    <text x="145" y="176" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12.5" fill="#a9c3d6">speed &#215; 1.1 per second</text>
+    <text x="145" y="192" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#8ba3b6">grows as speed ramps up</text>
+  </g>
+
+  <g transform="translate(455,96)">
+    <rect width="290" height="200" rx="16" fill="#0d0718" stroke="url(#sCardStroke)" stroke-width="1.4"/>
+    <g filter="url(#sGlowM)">
+      <circle cx="105" cy="90" r="20" fill="#7ee8ff"/>
+      <circle cx="150" cy="60" r="13" fill="#7ee8ff" opacity="0.85"/>
+      <circle cx="185" cy="105" r="16" fill="#7ee8ff" opacity="0.7"/>
+    </g>
+    <text x="145" y="40" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="700" font-size="16" fill="#dcfaff" letter-spacing="1.5">ORB BONUS</text>
+    <text x="145" y="176" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12.5" fill="#a9d3d6">+45 per orb collected</text>
+    <text x="145" y="192" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#8ba3b6">magnet pulls them in for you</text>
+  </g>
+
+  <g transform="translate(840,96)">
+    <rect width="290" height="200" rx="16" fill="#0d0718" stroke="url(#sCardStroke)" stroke-width="1.4"/>
+    <g filter="url(#sGlowM)">
+      <path d="M85,150 l6.5,-7 l6.5,7 l-6.5,7 z" fill="#ff5c5c" transform="scale(1.6) translate(30,-8)"/>
+    </g>
+    <circle cx="177" cy="97" r="46" fill="none" stroke="#ff8f8f" stroke-width="1.4" stroke-dasharray="4 5" opacity="0.7"/>
+    <text x="145" y="40" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="700" font-size="16" fill="#ffe0e0" letter-spacing="1.5">NEAR-MISS BONUS</text>
+    <text x="145" y="176" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12.5" fill="#d6a9a9">+10 for skimming past</text>
+    <text x="145" y="192" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#8ba3b6">a rock without hitting it</text>
+  </g>
+
+  <!-- arrows down to multiplier -->
+  <path d="M215,296 L390,352" stroke="#e2d4eb" stroke-width="1.4" opacity="0.55" marker-end="url(#sArrow)"/>
+  <path d="M600,296 L600,352" stroke="#e2d4eb" stroke-width="1.4" opacity="0.55" marker-end="url(#sArrow)"/>
+  <path d="M985,296 L810,352" stroke="#e2d4eb" stroke-width="1.4" opacity="0.55" marker-end="url(#sArrow)"/>
+
+  <!-- multiplier gate -->
+  <g transform="translate(490,352)">
+    <rect width="220" height="60" rx="30" fill="#0d0718" stroke="#ffd76d" stroke-width="1.6" opacity="0.9"/>
+    <text x="110" y="38" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="900" font-size="20" fill="url(#ffGold)" filter="url(#sGlowS)">&#215; 2 IF x2 ACTIVE</text>
+  </g>
+  <path d="M600,412 L600,438" stroke="#e2d4eb" stroke-width="1.4" opacity="0.6" marker-end="url(#sArrow)"/>
+
+  <!-- running total -->
+  <text x="600" y="470" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#c9b8d6" letter-spacing="1">top 5 runs are saved to <tspan fill="#ffd76d">localStorage</tspan> and shown on the start &#38; game-over screens</text>
+</svg>
