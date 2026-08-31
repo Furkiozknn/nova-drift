@@ -52,6 +52,15 @@ canvas {
   color: rgba(226, 212, 235, 0.55);
 }
 
+.modeTag {
+  font-size: 0.62rem;
+  letter-spacing: 0.28em;
+  color: #7ee8ff;
+  text-shadow: 0 0 10px rgba(126, 232, 255, 0.6);
+  margin-top: 2px;
+}
+.modeTag.hidden { display: none; }
+
 /* ---------- Power-up HUD ---------- */
 #powerups {
   display: flex;
@@ -227,6 +236,33 @@ canvas {
 .dot.rock { background: #ff5c5c; box-shadow: 0 0 10px #ff5c5c; }
 
 .powerlegend { margin-top: -6px; }
+
+/* ---------- Daily Challenge mode ---------- */
+.modeToggle {
+  margin-top: 2px;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  padding: 9px 22px;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+.modeToggle:hover { box-shadow: 0 0 16px rgba(255, 255, 255, 0.18); }
+.modeToggle.active {
+  color: #05020c;
+  background: linear-gradient(120deg, #7ee8ff, #a5d9ff);
+  box-shadow: 0 0 22px rgba(126, 232, 255, 0.5);
+}
+
+.dailyInfo {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  color: #7ee8ff;
+  text-shadow: 0 0 12px rgba(126, 232, 255, 0.5);
+}
+.dailyInfo.hidden { display: none; }
+#newDailyBest.hidden { display: none; }
 
 #finalScore {
   font-size: clamp(2.4rem, 8vw, 3.6rem);

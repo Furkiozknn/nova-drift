@@ -7,3 +7,5 @@
 **Araç/stack**: Three.js (import map + CDN, build adımı yok) + gerçek bloom post-processing — kalp-animasyon'da kurduğumuz altyapıyla aynı yaklaşım, hız kazanmak için.
 
 **Bitti tanımı**: Tarayıcıda açılınca oyun otomatik başlıyor, klavye (ok tuşları/WASD) ile gemi hareket ediyor, engellere çarpınca "Game Over" ekranı + skor çıkıyor, boşluk/tıkla yeniden başlatılabiliyor, konsolda hata yok, masaüstü ve mobilde (dokunmatikle) makul çalışıyor.
+
+**Sonraki sürüm eklentisi**: "Daily Challenge" modu eklendi — günün UTC tarihinden seedlenen deterministik bir RNG (mulberry32) ile spawn mantığı, böylece aynı gün oynayan herkes birebir aynı deseni görüyor ve skorlar gerçekten karşılaştırılabilir hale geliyor. Endless mod (gerçek `Math.random()`) hiç değişmedi — bu tamamen ek bir özellik.

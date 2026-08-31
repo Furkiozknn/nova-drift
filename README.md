@@ -26,6 +26,7 @@ Bir uzay tünelinde, gemin hep aynı noktada dururken tünel etrafında akıp gi
   - [Power-Ups](#power-ups)
   - [Scoring](#scoring)
   - [Leaderboard](#leaderboard)
+  - [Daily Challenge](#daily-challenge)
 - [How It Works](#how-it-works)
   - [Scene, Camera & Tunnel](#scene-camera--tunnel)
   - [Bloom Pipeline](#bloom-pipeline)
@@ -34,6 +35,7 @@ Bir uzay tünelinde, gemin hep aynı noktada dururken tünel etrafında akıp gi
   - [Synthesized Audio](#synthesized-audio)
   - [Accessibility](#accessibility)
 - [Run Locally](#run-locally)
+- [Testing](#testing)
 - [Project Structure](#project-structure)
 - [Stack & Credits](#stack--credits)
 - [License](#license)
@@ -79,6 +81,12 @@ Your score is a running total of three sources, each of which the x2 power-up do
 ### Leaderboard
 
 The top **5** scores persist locally via `localStorage` and are rendered on both the start screen and the game-over screen, so you always know what you're chasing before you even hit start.
+
+### Daily Challenge
+
+A toggle on the start screen ("GÜNLÜK MOD") switches spawning from real randomness to a **seeded** run: a small [mulberry32](https://github.com/bryc/code/blob/master/jshash/PRNGs.md) PRNG, seeded from the current UTC date (`YYYYMMDD` as an integer), replaces every `Math.random()` call in the obstacle/orb/power-up spawn logic. Two players who open the page on the same calendar day get the byte-for-byte identical spawn sequence — same obstacles, same orbs, same power-ups, in the same order — so their scores are genuinely comparable, not just two unrelated random runs.
+
+Today's Daily Challenge best is tracked separately from the endless-mode top-5 (`localStorage` key `novaDriftDaily-YYYYMMDD`, one per day) so the two modes never mix. Regular endless mode is untouched — it still calls real `Math.random()` — this is strictly additive.
 
 ---
 
@@ -148,20 +156,40 @@ No install, no build, no bundler:
 npx serve .
 ```
 
-Then open the printed local URL. It **must** be served over HTTP (not opened via `file://`) because `index.html` loads Three.js through an ES module import map pointed at `unpkg.com` — browsers block ES module imports from the `file://` origin.
+Then open the printed local URL. It **must** be served over HTTP (not opened via `file://`) because `index.html` loads Three.js through an ES module import map pointed at `unpkg.com` — browsers block ES module imports from the `file://` origin. The game also now ships a `manifest.json` (installable as a fullscreen PWA — "Add to Home Screen" on mobile) and Open Graph/Twitter Card meta tags so a shared link renders a real preview.
+
+## Testing
+
+A small dev-only Playwright suite — doesn't add a build step to the game itself (still plain static HTML/CSS/JS):
+
+```bash
+npm install
+npx playwright install --with-deps chromium   # first run only
+npm test
+```
+
+`test/prng.spec.js` verifies the Daily Challenge seeded RNG directly (no browser rendering needed): identical output across independent instances given the same day's seed, stable across a full UTC day, and different across days. `test/smoke.spec.js` loads the live page in a real browser and checks: no console errors with default and reduced-motion-emulated loads, the Daily Challenge toggle actually flips state, and `manifest.json` is present and well-formed. CI (`.github/workflows/ci.yml`) runs both on every push/PR.
 
 ## Project Structure
 
 ```
 nova-drift/
-├── index.html          # markup, HUD, overlays, import map
-├── styles.css           # HUD, overlays, joystick, buttons
-├── script.js            # scene setup, game loop, audio, everything
+├── index.html          # markup, HUD, overlays, import map, OG/Twitter meta
+├── styles.css           # HUD, overlays, joystick, buttons, daily-mode UI
+├── script.js            # scene setup, game loop, audio, daily-seed RNG, everything
+├── manifest.json         # PWA manifest (installable, fullscreen)
+├── package.json           # dev-only: Playwright test runner
+├── playwright.config.js   # dev-only: Playwright config (serves the page over http, no build)
+├── test/
+│   ├── prng.spec.js        # seeded-RNG determinism, no browser rendering needed
+│   └── smoke.spec.js       # console-error + Daily Challenge UI + manifest checks
+├── .github/workflows/ci.yml  # runs both test files on push/PR
 └── assets/
     ├── banner.svg              # hero graphic (this README)
     ├── diagram-how-it-works.svg
     ├── powerups-strip.svg
     ├── scoring-breakdown.svg
+    ├── og-preview.png          # social-share preview image (Open Graph / Twitter Card)
     ├── ship.png / nebula.png   # AI-generated art
     └── icon_shield.png / icon_magnet.png / icon_mult.png  # in-HUD icons
 ```
