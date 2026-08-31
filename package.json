@@ -1,0 +1,11 @@
+{
+  "name": "nova-drift-tests",
+  "private": true,
+  "description": "Dev-only Playwright smoke test for Nova Drift. The game itself has no build step and never will - this file exists purely so CI can load-test the live page in a browser.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

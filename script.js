@@ -61,6 +61,55 @@ const NEAR_MISS_BONUS = 10;
 
 const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+// ---------- Daily Challenge: seedable RNG for spawn logic only ----------
+// A tiny mulberry32 PRNG. When Daily Challenge mode is active, every spawn
+// decision (obstacle/orb/power-up type, position, and timing) is drawn from
+// this instead of Math.random(), seeded from today's UTC date — so every
+// player who plays on the same calendar day gets the exact same pattern and
+// scores are genuinely comparable. Regular endless mode leaves `spawnRng`
+// pointed at the real Math.random(), so its behavior is unchanged.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function todayUTCStamp(date = new Date()) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}${m}${d}`;
+}
+function dailySeed(date = new Date()) {
+  return Number(todayUTCStamp(date)); // e.g. 20260831
+}
+function dailyStorageKey(date = new Date()) {
+  return `novaDriftDaily-${todayUTCStamp(date)}`;
+}
+function loadDailyBest() {
+  return Number(localStorage.getItem(dailyStorageKey()) || 0);
+}
+function saveDailyBest(s) {
+  const val = Math.floor(s);
+  localStorage.setItem(dailyStorageKey(), String(val));
+  return val;
+}
+
+let dailyMode = new URLSearchParams(window.location.search).get('daily') === '1';
+let spawnRng = Math.random; // swapped to a seeded generator when Daily Challenge starts
+const rand = () => spawnRng();
+
+// Small record of recent spawns (position/type only) — used to verify that
+// Daily Challenge mode is actually deterministic. Capped so it never grows
+// unbounded during a long run.
+let spawnLog = [];
+function logSpawn(kind, x, y, z) {
+  if (spawnLog.length < 200) spawnLog.push({ kind, x, y, z });
+}
+
 // ---------- Audio (synthesized with Web Audio API - no external files) ----------
 const sfx = (() => {
   let ctx = null;
@@ -408,11 +457,11 @@ for (const type of POWERUP_TYPES) {
   }
 }
 
-function spawnFrom(pool, atZ) {
+function spawnFrom(pool, atZ, kind) {
   const slot = pool.find((s) => !s.active);
   if (!slot) return;
-  const angle = Math.random() * Math.PI * 2;
-  const r = Math.random() * PLAY_RADIUS * 0.9;
+  const angle = rand() * Math.PI * 2;
+  const r = rand() * PLAY_RADIUS * 0.9;
   slot.x = Math.cos(angle) * r;
   slot.y = Math.sin(angle) * r;
   slot.z = atZ;
@@ -421,14 +470,15 @@ function spawnFrom(pool, atZ) {
   slot.mesh.visible = true;
   slot.mesh.position.set(slot.x, slot.y, slot.z);
   slot.mesh.scale.setScalar(1);
+  logSpawn(kind, slot.x, slot.y, slot.z);
 }
 function spawnPowerup(atZ) {
-  const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+  const type = POWERUP_TYPES[Math.floor(rand() * POWERUP_TYPES.length)];
   const candidates = powerups.filter((s) => !s.active && s.type === type);
   const slot = candidates[0] || powerups.find((s) => !s.active);
   if (!slot) return;
-  const angle = Math.random() * Math.PI * 2;
-  const r = Math.random() * PLAY_RADIUS * 0.8;
+  const angle = rand() * Math.PI * 2;
+  const r = rand() * PLAY_RADIUS * 0.8;
   slot.x = Math.cos(angle) * r;
   slot.y = Math.sin(angle) * r;
   slot.z = atZ;
@@ -437,6 +487,7 @@ function spawnPowerup(atZ) {
   slot.mesh.visible = true;
   slot.mesh.position.set(slot.x, slot.y, slot.z);
   slot.mesh.scale.setScalar(1);
+  logSpawn(`powerup:${type}`, slot.x, slot.y, slot.z);
 }
 
 function resetPoolMesh(slot) {
@@ -568,6 +619,13 @@ const newBestEl = document.getElementById('newBest');
 const leaderboardStartEl = document.getElementById('leaderboardStart');
 const leaderboardEndEl = document.getElementById('leaderboardEnd');
 const pauseBtn = document.getElementById('pauseBtn');
+const modeTagEl = document.getElementById('modeTag');
+const dailyToggleBtn = document.getElementById('dailyToggleBtn');
+const dailyInfoStartEl = document.getElementById('dailyInfoStart');
+const dailyBestStartEl = document.getElementById('dailyBestStart');
+const dailyInfoEndEl = document.getElementById('dailyInfoEnd');
+const dailyBestEndEl = document.getElementById('dailyBestEnd');
+const newDailyBestEl = document.getElementById('newDailyBest');
 document.getElementById('startBtn').addEventListener('click', () => { sfx.click(); startGame(); });
 document.getElementById('restartBtn').addEventListener('click', () => { sfx.click(); startGame(); });
 document.getElementById('resumeBtn').addEventListener('click', () => { sfx.click(); resumeGame(); });
@@ -575,6 +633,20 @@ pauseBtn.addEventListener('click', () => {
   if (state === 'playing') pauseGame();
   else if (state === 'paused') resumeGame();
 });
+dailyToggleBtn.addEventListener('click', () => {
+  sfx.click();
+  dailyMode = !dailyMode;
+  refreshDailyToggleUI();
+});
+
+function refreshDailyToggleUI() {
+  dailyToggleBtn.textContent = dailyMode ? 'GÜNLÜK MOD: AÇIK' : 'GÜNLÜK MOD: KAPALI';
+  dailyToggleBtn.classList.toggle('active', dailyMode);
+  dailyToggleBtn.setAttribute('aria-pressed', String(dailyMode));
+  dailyInfoStartEl.classList.toggle('hidden', !dailyMode);
+  if (dailyMode) dailyBestStartEl.textContent = Math.floor(loadDailyBest());
+}
+refreshDailyToggleUI();
 
 bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
 renderLeaderboard(scores);
@@ -609,6 +681,8 @@ function startGame() {
   multUntil = 0;
   hudPulseT = 0;
   shakeT = 0;
+  spawnLog = [];
+  spawnRng = dailyMode ? mulberry32(dailySeed()) : Math.random;
   shipGroup.rotation.set(0, 0, 0);
   obstacles.forEach(resetPoolMesh);
   orbs.forEach(resetPoolMesh);
@@ -619,6 +693,9 @@ function startGame() {
   gameOverScreen.classList.add('hidden');
   pauseScreen.classList.add('hidden');
   newBestEl.classList.add('hidden');
+  newDailyBestEl.classList.add('hidden');
+  modeTagEl.classList.toggle('hidden', !dailyMode);
+  bestEl.textContent = dailyMode ? `BUGÜN: ${Math.floor(loadDailyBest())}` : `EN İYİ: ${Math.floor(best)}`;
   hud.classList.add('visible');
   pauseBtn.classList.add('visible');
   refreshPowerupHud();
@@ -630,12 +707,27 @@ function endGame() {
   hud.classList.remove('visible');
   pauseBtn.classList.remove('visible');
   finalScoreEl.textContent = Math.floor(score);
-  const wasNewBest = score > best;
-  scores = saveScore(score);
-  best = scores[0] || 0;
-  if (wasNewBest) newBestEl.classList.remove('hidden');
-  bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
-  renderLeaderboard(scores);
+  if (dailyMode) {
+    // Daily Challenge runs never touch the endless top-5 leaderboard — they
+    // get their own per-day best score, kept separate so the two modes never mix.
+    const prevDailyBest = loadDailyBest();
+    const wasNewDailyBest = score > prevDailyBest;
+    const dailyBest = wasNewDailyBest ? saveDailyBest(score) : prevDailyBest;
+    dailyBestEndEl.textContent = dailyBest;
+    dailyInfoEndEl.classList.remove('hidden');
+    newDailyBestEl.classList.toggle('hidden', !wasNewDailyBest);
+    newBestEl.classList.add('hidden');
+    leaderboardEndEl.classList.add('hidden');
+  } else {
+    const wasNewBest = score > best;
+    scores = saveScore(score);
+    best = scores[0] || 0;
+    if (wasNewBest) newBestEl.classList.remove('hidden');
+    bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
+    renderLeaderboard(scores);
+    dailyInfoEndEl.classList.add('hidden');
+    leaderboardEndEl.classList.remove('hidden');
+  }
   gameOverScreen.classList.remove('hidden');
   triggerShake(0.3, 0.15);
   flash('#ff3b3b');
@@ -710,10 +802,10 @@ function updatePlaying(dt) {
   distSinceSpawn += speed * dt;
   if (distSinceSpawn > nextSpawnAt) {
     distSinceSpawn = 0;
-    nextSpawnAt = 1.7 + Math.random() * 1.1;
-    const r = Math.random();
-    if (r < 0.46) spawnFrom(obstacles, shipZ - SPAWN_AHEAD);
-    else if (r < 0.88) spawnFrom(orbs, shipZ - SPAWN_AHEAD);
+    nextSpawnAt = 1.7 + rand() * 1.1;
+    const r = rand();
+    if (r < 0.46) spawnFrom(obstacles, shipZ - SPAWN_AHEAD, 'obstacle');
+    else if (r < 0.88) spawnFrom(orbs, shipZ - SPAWN_AHEAD, 'orb');
     else spawnPowerup(shipZ - SPAWN_AHEAD);
   }
 
@@ -839,3 +931,21 @@ function animate() {
   requestAnimationFrame(animate);
 }
 requestAnimationFrame(animate);
+
+// ---------- Debug hook (opt-in via ?debug=1, never shipped to normal players) ----------
+// Exists solely so the Daily Challenge seeded RNG can be verified end-to-end
+// (identical spawn sequence across two separate page loads on the same UTC
+// day) without exposing a seed-override footgun to real players chasing the
+// daily leaderboard.
+if (new URLSearchParams(window.location.search).get('debug') === '1') {
+  window.__novaDriftDebug = {
+    startDaily(seed) {
+      dailyMode = true;
+      refreshDailyToggleUI();
+      startGame();
+      if (seed !== undefined) spawnRng = mulberry32(Number(seed));
+    },
+    getSpawnLog() { return spawnLog.slice(); },
+    dailySeed,
+  };
+}
