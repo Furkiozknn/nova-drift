@@ -3,6 +3,7 @@
 // modes, and that manifest.json is well-formed. Does not change how the game
 // itself is built or served (still plain static HTML/CSS/JS, no bundler).
 const { test, expect } = require('@playwright/test');
+const { serveLocalCdn } = require('./fixtures');
 
 function collectConsoleErrors(page) {
   const errors = [];
@@ -14,6 +15,7 @@ function collectConsoleErrors(page) {
 }
 
 test('loads with no console errors (default motion)', async ({ page }) => {
+  await serveLocalCdn(page);
   const errors = collectConsoleErrors(page);
   await page.goto('/index.html');
   await page.waitForTimeout(2000);
@@ -22,6 +24,7 @@ test('loads with no console errors (default motion)', async ({ page }) => {
 });
 
 test('loads with no console errors (prefers-reduced-motion: reduce)', async ({ page }) => {
+  await serveLocalCdn(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const errors = collectConsoleErrors(page);
   await page.goto('/index.html');
@@ -30,6 +33,7 @@ test('loads with no console errors (prefers-reduced-motion: reduce)', async ({ p
 });
 
 test('Daily Challenge toggle flips label and reveals today\'s best', async ({ page }) => {
+  await serveLocalCdn(page);
   await page.goto('/index.html');
   const toggle = page.locator('#dailyToggleBtn');
   await expect(toggle).toHaveText('GÜNLÜK MOD: KAPALI');
@@ -41,6 +45,7 @@ test('Daily Challenge toggle flips label and reveals today\'s best', async ({ pa
 });
 
 test('manifest.json is present and well-formed', async ({ page, request }) => {
+  await serveLocalCdn(page);
   await page.goto('/index.html');
   const manifestHref = await page.locator('link[rel="manifest"]').getAttribute('href');
   expect(manifestHref).toBe('manifest.json');

@@ -160,6 +160,8 @@ Then open the printed local URL. It **must** be served over HTTP (not opened via
 
 ## Testing
 
+The Playwright suite is hermetic: Three.js is served from the pinned `three` devDependency and the Google Fonts stylesheet is stubbed, so a CDN outage cannot redden CI and the suite runs on an offline machine (`PW_CHROMIUM_PATH` points it at a preinstalled browser). Rendering adapts to the device: a 60-frame moving average of frame time lowers the render scale in 0.15 steps (floor 0.6) when frames exceed 20 ms and raises it in 0.1 steps below 12.5 ms, with a 2 s cooldown - the bloom pass is what a phone pays for, and it scales with pixel count.
+
 A small dev-only Playwright suite — doesn't add a build step to the game itself (still plain static HTML/CSS/JS):
 
 ```bash
