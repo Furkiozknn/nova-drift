@@ -296,6 +296,7 @@ function flash(color) {
 
 // ---------- Starfield ----------
 const STAR_COUNT = 700;
+const STAR_SPAN = 260; // depth of the field; stars recycle by this much (see the frame loop)
 const starGeo = new THREE.BufferGeometry();
 const starPos = new Float32Array(STAR_COUNT * 3);
 const starPhase = new Float32Array(STAR_COUNT);
@@ -305,7 +306,7 @@ for (let i = 0; i < STAR_COUNT; i++) {
   const theta = Math.random() * Math.PI * 2;
   starPos[i * 3] = r * Math.cos(theta);
   starPos[i * 3 + 1] = r * Math.sin(theta) * 0.6;
-  starPos[i * 3 + 2] = -Math.random() * 260;
+  starPos[i * 3 + 2] = -Math.random() * STAR_SPAN;
   starPhase[i] = Math.random() * Math.PI * 2;
   starSize[i] = Math.random() * 5 + 2;
 }
@@ -845,6 +846,21 @@ function updatePlaying(dt) {
     if (ring.position.z > shipZ + RECYCLE_MARGIN) {
       ring.position.z -= RING_COUNT * RING_SPACING;
     }
+  }
+
+  // recycle stars the same way - without this the field spans only
+  // STAR_SPAN of z, so 20-30 s into a run the ship passed every star and
+  // the sky went permanently empty. 700 comparisons per frame is noise.
+  {
+    const positions = starGeo.attributes.position;
+    let starsMoved = false;
+    for (let i = 0; i < STAR_COUNT; i++) {
+      if (positions.array[i * 3 + 2] > shipZ + RECYCLE_MARGIN) {
+        positions.array[i * 3 + 2] -= STAR_SPAN;
+        starsMoved = true;
+      }
+    }
+    if (starsMoved) positions.needsUpdate = true;
   }
 
   // spawn obstacles / orbs / power-ups based on distance traveled
