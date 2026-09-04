@@ -38,6 +38,55 @@ function onResize() {
 }
 window.addEventListener('resize', onResize);
 
+// ---------- Adaptive render scale ----------
+// Bloom is the expensive pass and its cost scales with pixel count. On a
+// phone that cannot hold 60 fps at full DPR, dropping the render scale a
+// notch buys more than any other single change, and nobody notices 0.85x
+// at 2x DPR. Decisions are made from a moving average over 60 frames, with
+// hysteresis (drop above 20 ms, recover below 12.5 ms) and a 2 s cooldown
+// so the scale settles instead of oscillating. Frame timing is read from
+// the raw clock delta, before the 0.05 s clamp that protects the physics.
+const BASE_PIXEL_RATIO = Math.min(window.devicePixelRatio || 1, 2);
+const RENDER_SCALE_MIN = 0.6;
+let renderScale = 1;
+
+// Pure decision function - mirrored in test/adaptive.spec.js, keep in sync.
+function nextRenderScale(current, avgFrameMs) {
+  if (avgFrameMs > 20 && current > RENDER_SCALE_MIN) {
+    return Math.max(RENDER_SCALE_MIN, Math.round((current - 0.15) * 100) / 100);
+  }
+  if (avgFrameMs < 12.5 && current < 1) {
+    return Math.min(1, Math.round((current + 0.1) * 100) / 100);
+  }
+  return current;
+}
+
+function applyRenderScale(scale) {
+  renderScale = scale;
+  const pr = BASE_PIXEL_RATIO * scale;
+  renderer.setPixelRatio(pr);
+  composer.setPixelRatio(pr);
+  onResize();
+}
+
+let adaptFrames = 0;
+let adaptAccumMs = 0;
+let adaptLastChangeT = 0;
+function adaptQuality(rawDt, t) {
+  adaptFrames += 1;
+  adaptAccumMs += rawDt * 1000;
+  if (adaptFrames < 60) return;
+  const avg = adaptAccumMs / adaptFrames;
+  adaptFrames = 0;
+  adaptAccumMs = 0;
+  if (t - adaptLastChangeT < 2) return;
+  const next = nextRenderScale(renderScale, avg);
+  if (next !== renderScale) {
+    applyRenderScale(next);
+    adaptLastChangeT = t;
+  }
+}
+
 // ---------- Tunable constants ----------
 const PLAY_RADIUS = 2.25;
 const RING_RADIUS = 3.3;
@@ -919,8 +968,10 @@ function idleDrift(t) {
 }
 
 function animate() {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  const rawDt = clock.getDelta();
+  const dt = Math.min(rawDt, 0.05);
   const t = clock.getElapsedTime();
+  adaptQuality(rawDt, t);
 
   starMat.uniforms.uTime.value = t;
 
@@ -947,5 +998,7 @@ if (new URLSearchParams(window.location.search).get('debug') === '1') {
     },
     getSpawnLog() { return spawnLog.slice(); },
     dailySeed,
+    getRenderScale() { return renderScale; },
+    nextRenderScale,
   };
 }

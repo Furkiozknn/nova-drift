@@ -15,5 +15,10 @@ module.exports = defineConfig({
   },
   use: {
     baseURL: 'http://localhost:4174',
+    // Point PW_CHROMIUM_PATH at an existing Chromium to skip the browser
+    // download (sandboxes without egress); unset, Playwright uses its own.
+    ...(process.env.PW_CHROMIUM_PATH
+      ? { launchOptions: { executablePath: process.env.PW_CHROMIUM_PATH } }
+      : {}),
   },
 });
