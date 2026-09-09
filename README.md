@@ -170,7 +170,7 @@ npx playwright install --with-deps chromium   # first run only
 npm test
 ```
 
-`test/prng.spec.js` verifies the Daily Challenge seeded RNG directly (no browser rendering needed): identical output across independent instances given the same day's seed, stable across a full UTC day, and different across days. `test/smoke.spec.js` loads the live page in a real browser and checks: no console errors with default and reduced-motion-emulated loads, the Daily Challenge toggle actually flips state, and `manifest.json` is present and well-formed. CI (`.github/workflows/ci.yml`) runs both on every push/PR.
+`test/prng.spec.js` verifies the Daily Challenge seeded RNG directly (no browser rendering needed): identical output across independent instances given the same day's seed, stable across a full UTC day, and different across days. `test/smoke.spec.js` loads the live page in a real browser and checks: no console errors with default and reduced-motion-emulated loads, the Daily Challenge toggle actually flips state, and `manifest.json` is present and well-formed. `test/adaptive.spec.js` verifies the adaptive render-scale decision function (drop/recover thresholds, hysteresis band, floor/ceiling) both in isolation and against the live page via the `?debug=1` hook. CI (`.github/workflows/ci.yml`) runs all three on every push/PR.
 
 ## Project Structure
 
@@ -184,7 +184,10 @@ nova-drift/
 ├── playwright.config.js   # dev-only: Playwright config (serves the page over http, no build)
 ├── test/
 │   ├── prng.spec.js        # seeded-RNG determinism, no browser rendering needed
-│   └── smoke.spec.js       # console-error + Daily Challenge UI + manifest checks
+│   ├── smoke.spec.js       # console-error + Daily Challenge UI + manifest checks
+│   ├── adaptive.spec.js    # adaptive render-scale decision function, isolated + live
+│   ├── fixtures.js         # hermetic-CDN test helper shared by the specs above
+│   └── capture-gif.js      # dev-only: records gameplay frames for README visuals
 ├── .github/workflows/ci.yml  # runs both test files on push/PR
 └── assets/
     ├── banner.svg              # hero graphic (this README)
