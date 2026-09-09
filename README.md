@@ -2,6 +2,11 @@
 
 <div align="center">
 
+![Nova Drift oynanış kaydı: uzay tünelinde kırmızı engellerin arasından süzülen gemi, skor yukarı sayıyor](assets/gameplay.gif)
+
+<sub>Gerçek oynanış, montaj değil — <code>node test/capture-gif.js</code> oyunu testlerin kullandığı<br>
+aynı hermetik kurulumla açıp oynuyor ve kareleri yazıyor. Yukarıdaki kayıt 525 puanlık bir turdan.</sub>
+
 ![License](https://img.shields.io/badge/license-MIT-a5d9ff?style=flat-square)
 ![Three.js](https://img.shields.io/badge/three.js-r160-ffb3d9?style=flat-square)
 ![Build step](https://img.shields.io/badge/build%20step-none-6dff9e?style=flat-square)

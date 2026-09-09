@@ -1,3 +1,6 @@
 node_modules/
 test-results/
 playwright-report/
+
+# test/capture-gif.js gecici kareleri
+.capture/
