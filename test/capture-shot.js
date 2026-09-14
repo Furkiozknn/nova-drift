@@ -1,6 +1,6 @@
 // Capture a gameplay still, for before/after comparison when changing the art.
 //
-//     node test/capture-shot.js <output.png> [ms-of-play]
+//     node test/capture-shot.js <output.png> [ms-of-play] [width] [height]
 //
 // Uses the same local-CDN fixture the tests use, so it never depends on the
 // network and the frame it captures is the frame CI would see.
@@ -10,6 +10,8 @@ const path = require('node:path');
 
 const OUT = process.argv[2] || 'shot.png';
 const PLAY_MS = Number(process.argv[3] || 2600);
+const W = Number(process.argv[4] || 1280);
+const H = Number(process.argv[5] || 720);
 const PORT = 8099;
 const ROOT = path.resolve(__dirname, '..');
 
@@ -30,7 +32,7 @@ const ROOT = path.resolve(__dirname, '..');
   await new Promise((r) => setTimeout(r, 600));
 
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const page = await browser.newPage({ viewport: { width: W, height: H } });
   await page.goto(`http://localhost:${PORT}/index.html`);
   await page.waitForSelector('#startBtn');
   await page.click('#startBtn');
