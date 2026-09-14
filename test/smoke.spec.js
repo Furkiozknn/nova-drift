@@ -36,11 +36,11 @@ test('Daily Challenge toggle flips label and reveals today\'s best', async ({ pa
   await serveLocalCdn(page);
   await page.goto('/index.html');
   const toggle = page.locator('#dailyToggleBtn');
-  await expect(toggle).toHaveText('GÜNLÜK MOD: KAPALI');
+  await expect(toggle).toHaveText('DAILY MODE: OFF');
   await expect(page.locator('#dailyInfoStart')).toBeHidden();
 
   await toggle.click();
-  await expect(toggle).toHaveText('GÜNLÜK MOD: AÇIK');
+  await expect(toggle).toHaveText('DAILY MODE: ON');
   await expect(page.locator('#dailyInfoStart')).toBeVisible();
 });
 

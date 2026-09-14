@@ -26,6 +26,39 @@ const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, windo
 composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
 
+// ---------- Language ----------
+// The markup is English because that is what a portal reviewer and most of the
+// world will read, and because it still reads correctly if this script never
+// runs. A Turkish browser gets Turkish laid over it.
+//
+// Twenty strings do not justify an i18n library; a library for twenty strings
+// is the bug, not the fix. One dictionary, decided once at load.
+const TR = (navigator.language || '').toLowerCase().startsWith('tr');
+const t = TR
+  ? { best: 'EN İYİ', today: 'BUGÜN', dailyOn: 'GÜNLÜK MOD: AÇIK',
+      dailyOff: 'GÜNLÜK MOD: KAPALI', noScores: 'henüz skor yok' }
+  : { best: 'BEST', today: 'TODAY', dailyOn: 'DAILY MODE: ON',
+      dailyOff: 'DAILY MODE: OFF', noScores: 'no scores yet' };
+
+if (TR) {
+  const tr = {
+    '.tagline': 'bir ışık tünelinde hayatta kal',
+    '#modeTag': 'GÜNLÜK MOD',
+    '#startBtn': 'BAŞLA',
+    '#restartBtn': 'TEKRAR DENE',
+    '#resumeBtn': 'DEVAM ET',
+    '.pauseTitle': 'DURAKLATILDI',
+    '#gameOverScreen h2': 'ÇARPIŞMA',
+    '#newBest': 'yeni rekor!',
+    '#newDailyBest': '(yeni günlük rekor!)',
+  };
+  for (const [sel, text] of Object.entries(tr)) {
+    const el = document.querySelector(sel);
+    if (el) el.textContent = text;
+  }
+  document.documentElement.lang = 'tr';
+}
+
 function onResize() {
   const w = window.innerWidth, h = window.innerHeight;
   if (w === 0 || h === 0) return;
@@ -664,7 +697,7 @@ function saveScore(s) {
 function renderLeaderboard(list) {
   const html = list.length
     ? list.map((s, i) => `<div class="lbRow"><span>${i + 1}.</span><span>${s}</span></div>`).join('')
-    : '<div class="lbRow lbEmpty">henüz skor yok</div>';
+    : `<div class="lbRow lbEmpty">${t.noScores}</div>`;
   leaderboardStartEl.innerHTML = html;
   leaderboardEndEl.innerHTML = html;
 }
@@ -705,7 +738,7 @@ dailyToggleBtn.addEventListener('click', () => {
 });
 
 function refreshDailyToggleUI() {
-  dailyToggleBtn.textContent = dailyMode ? 'GÜNLÜK MOD: AÇIK' : 'GÜNLÜK MOD: KAPALI';
+  dailyToggleBtn.textContent = dailyMode ? t.dailyOn : t.dailyOff;
   dailyToggleBtn.classList.toggle('active', dailyMode);
   dailyToggleBtn.setAttribute('aria-pressed', String(dailyMode));
   dailyInfoStartEl.classList.toggle('hidden', !dailyMode);
@@ -713,7 +746,7 @@ function refreshDailyToggleUI() {
 }
 refreshDailyToggleUI();
 
-bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
+bestEl.textContent = `${t.best}: ${Math.floor(best)}`;
 renderLeaderboard(scores);
 
 function refreshPowerupHud() {
@@ -760,7 +793,9 @@ function startGame() {
   newBestEl.classList.add('hidden');
   newDailyBestEl.classList.add('hidden');
   modeTagEl.classList.toggle('hidden', !dailyMode);
-  bestEl.textContent = dailyMode ? `BUGÜN: ${Math.floor(loadDailyBest())}` : `EN İYİ: ${Math.floor(best)}`;
+  bestEl.textContent = dailyMode
+    ? `${t.today}: ${Math.floor(loadDailyBest())}`
+    : `${t.best}: ${Math.floor(best)}`;
   hud.classList.add('visible');
   pauseBtn.classList.add('visible');
   refreshPowerupHud();
@@ -788,7 +823,7 @@ function endGame() {
     scores = saveScore(score);
     best = scores[0] || 0;
     if (wasNewBest) newBestEl.classList.remove('hidden');
-    bestEl.textContent = `EN İYİ: ${Math.floor(best)}`;
+    bestEl.textContent = `${t.best}: ${Math.floor(best)}`;
     renderLeaderboard(scores);
     dailyInfoEndEl.classList.add('hidden');
     leaderboardEndEl.classList.remove('hidden');

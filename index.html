@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="description" content="Nova Drift — bir ışık tünelinde engellerden kaçıp enerji küreleri topladığın hızlı bir uzay koşusu.">
+<meta name="description" content="Nova Drift — a fast space run through a tunnel of light - dodge the rocks, grab the orbs.">
 <meta name="theme-color" content="#05020c">
 <title>Nova Drift</title>
 <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -12,7 +12,7 @@
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="Nova Drift">
-<meta property="og:description" content="Nova Drift — bir ışık tünelinde engellerden kaçıp enerji küreleri topladığın hızlı bir uzay koşusu.">
+<meta property="og:description" content="Nova Drift — a fast space run through a tunnel of light - dodge the rocks, grab the orbs.">
 <meta property="og:url" content="https://furkiozknn.github.io/nova-drift/">
 <meta property="og:image" content="https://furkiozknn.github.io/nova-drift/assets/og-preview.png">
 <meta property="og:image:width" content="1200">
@@ -21,7 +21,7 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Nova Drift">
-<meta name="twitter:description" content="Nova Drift — bir ışık tünelinde engellerden kaçıp enerji küreleri topladığın hızlı bir uzay koşusu.">
+<meta name="twitter:description" content="Nova Drift — a fast space run through a tunnel of light - dodge the rocks, grab the orbs.">
 <meta name="twitter:image" content="https://furkiozknn.github.io/nova-drift/assets/og-preview.png">
 <link rel="stylesheet" href="styles.css">
 <script type="importmap">
@@ -37,13 +37,13 @@
 <canvas id="scene"></canvas>
 <div id="hitFlash" aria-hidden="true"></div>
 
-<button id="muteBtn" aria-label="Sesi kapat/aç">🔊</button>
-<button id="pauseBtn" aria-label="Duraklat">⏸</button>
+<button id="muteBtn" aria-label="Mute or unmute">🔊</button>
+<button id="pauseBtn" aria-label="Pause">⏸</button>
 
 <div id="hud">
   <div id="score">0</div>
-  <div id="best">EN İYİ: 0</div>
-  <div id="modeTag" class="modeTag hidden">GÜNLÜK MOD</div>
+  <div id="best">BEST: 0</div>
+  <div id="modeTag" class="modeTag hidden">DAILY MODE</div>
   <div id="powerups"></div>
 </div>
 
@@ -53,36 +53,36 @@
 
 <div id="startScreen" class="overlay">
   <h1>NOVA DRIFT</h1>
-  <p class="tagline">bir ışık tünelinde hayatta kal</p>
+  <p class="tagline">survive a tunnel of light</p>
   <div class="controls">
-    <span>🖱️ / 👆 sürükle</span>
-    <span>⌨️ ok tuşları · WASD</span>
-    <span class="escHint">⏸ ESC duraklat</span>
+    <span>🖱️ / 👆 drag</span>
+    <span>⌨️ arrows · WASD</span>
+    <span class="escHint">⏸ ESC pause</span>
   </div>
-  <p class="legend"><span class="dot orb"></span> topla &nbsp; <span class="dot rock"></span> kaçın</p>
+  <p class="legend"><span class="dot orb"></span> collect &nbsp; <span class="dot rock"></span> avoid</p>
   <div class="legend powerlegend">
-    <img class="icon" src="assets/icon_shield.png" alt=""> kalkan &nbsp;
-    <img class="icon" src="assets/icon_magnet.png" alt=""> mıknatıs &nbsp;
-    <img class="icon" src="assets/icon_mult.png" alt=""> x2 puan
+    <img class="icon" src="assets/icon_shield.png" alt=""> shield &nbsp;
+    <img class="icon" src="assets/icon_magnet.png" alt=""> magnet &nbsp;
+    <img class="icon" src="assets/icon_mult.png" alt=""> x2 score
   </div>
-  <button id="startBtn">BAŞLA</button>
-  <button id="dailyToggleBtn" class="modeToggle" type="button" aria-pressed="false">GÜNLÜK MOD: KAPALI</button>
-  <div id="dailyInfoStart" class="dailyInfo hidden">bugünün rekoru: <span id="dailyBestStart">0</span></div>
+  <button id="startBtn">START</button>
+  <button id="dailyToggleBtn" class="modeToggle" type="button" aria-pressed="false">DAILY MODE: OFF</button>
+  <div id="dailyInfoStart" class="dailyInfo hidden">today's best: <span id="dailyBestStart">0</span></div>
   <div id="leaderboardStart" class="leaderboard"></div>
 </div>
 
 <div id="gameOverScreen" class="overlay hidden">
-  <h2>ÇARPIŞMA</h2>
+  <h2>CRASH</h2>
   <div id="finalScore">0</div>
-  <p id="newBest" class="hidden">yeni rekor!</p>
-  <button id="restartBtn">TEKRAR DENE</button>
-  <div id="dailyInfoEnd" class="dailyInfo hidden">bugünün rekoru: <span id="dailyBestEnd">0</span> <span id="newDailyBest" class="hidden">(yeni günlük rekor!)</span></div>
+  <p id="newBest" class="hidden">new record!</p>
+  <button id="restartBtn">TRY AGAIN</button>
+  <div id="dailyInfoEnd" class="dailyInfo hidden">today's best: <span id="dailyBestEnd">0</span> <span id="newDailyBest" class="hidden">(new daily best!)</span></div>
   <div id="leaderboardEnd" class="leaderboard"></div>
 </div>
 
 <div id="pauseScreen" class="overlay hidden">
-  <h2 class="pauseTitle">DURAKLATILDI</h2>
-  <button id="resumeBtn">DEVAM ET</button>
+  <h2 class="pauseTitle">PAUSED</h2>
+  <button id="resumeBtn">RESUME</button>
 </div>
 
 <script type="module" src="script.js"></script>
