@@ -15,8 +15,13 @@ renderer.toneMappingExposure = 0.98;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x05020c, 0.045);
-scene.background = new THREE.TextureLoader().load('assets/nebula.png');
+scene.background = new THREE.TextureLoader().load('assets/nebula.webp');
 scene.background.colorSpace = THREE.SRGBColorSpace;
+// Scene fog never touches the background, so the nebula was the only thing on
+// screen rendered at full strength - it read as the subject and the gameplay
+// read as clutter on top of it. Dimming it is what turns a wallpaper back into
+// a backdrop; everything the player must react to is emissive and unaffected.
+scene.backgroundIntensity = 0.2;
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
 
@@ -36,9 +41,11 @@ composer.addPass(new OutputPass());
 const TR = (navigator.language || '').toLowerCase().startsWith('tr');
 const t = TR
   ? { best: 'EN İYİ', today: 'BUGÜN', dailyOn: 'GÜNLÜK MOD: AÇIK',
-      dailyOff: 'GÜNLÜK MOD: KAPALI', noScores: 'henüz skor yok' }
+      dailyOff: 'GÜNLÜK MOD: KAPALI', noScores: 'henüz skor yok',
+      shield: 'KALKAN', magnet: 'MIKNATIS' }
   : { best: 'BEST', today: 'TODAY', dailyOn: 'DAILY MODE: ON',
-      dailyOff: 'DAILY MODE: OFF', noScores: 'no scores yet' };
+      dailyOff: 'DAILY MODE: OFF', noScores: 'no scores yet',
+      shield: 'SHIELD', magnet: 'MAGNET' };
 
 if (TR) {
   const tr = {
@@ -392,23 +399,105 @@ const stars = new THREE.Points(starGeo, starMat);
 scene.add(stars);
 
 // ---------- Tunnel rings ----------
-const ringGeo = new THREE.TorusGeometry(RING_RADIUS, 0.045, 8, 48);
-const ringMat = new THREE.MeshBasicMaterial({ color: 0x7fa8ff, transparent: true, opacity: 0.55, toneMapped: false });
+const ringGeo = new THREE.TorusGeometry(RING_RADIUS, 0.062, 8, 48);
+// Every ring used to share one material at a fixed opacity, which is why the
+// tunnel read as two flat circles rather than a corridor: at equal brightness
+// nothing tells the eye which ring is near. Each ring now owns its material
+// and fades with distance, updated in the same loop that recycles it.
 const rings = [];
 for (let i = 0; i < RING_COUNT; i++) {
-  const ring = new THREE.Mesh(ringGeo, ringMat);
+  const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
+    color: 0x8ad6ff, transparent: true, opacity: 0.55, toneMapped: false,
+  }));
   ring.position.z = -i * RING_SPACING;
   scene.add(ring);
   rings.push(ring);
 }
+// Fog (FogExp2 at 0.045) swallows anything past roughly this distance, so
+// fading over the full tunnel length spent the whole gradient on rings the
+// player never sees. Fade across what is actually visible instead.
+const RING_FADE = 46;
 
 // ---------- Player ship ----------
+// Built from flat-coloured primitives rather than a painted sprite, for two
+// reasons - the second is the one that mattered:
+//
+//   - the rest of the scene is untextured geometry lit only by bloom, so a
+//     painted ship sat on top of it like a sticker rather than in it;
+//   - a sprite always turns to face the camera. The old art was drawn in side
+//     profile while the player flies away from the camera, so the ship was
+//     permanently sideways to its own direction of travel, and no repaint
+//     could fix it: a sprite has no other side to show when it banks.
+//
+// The model is built along -Z, so "flying away" is a property of the mesh
+// rather than of the one angle the artwork happened to be drawn from. There
+// are no lights in this scene, so the form reads through silhouette and
+// flat colour separation, the same way every other object here does.
 const shipGroup = new THREE.Group();
-const shipTexture = new THREE.TextureLoader().load('assets/ship.png');
-shipTexture.colorSpace = THREE.SRGBColorSpace;
-const shipSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: shipTexture, transparent: true, toneMapped: false }));
-shipSprite.scale.set(1.5, 1.5, 1);
-shipGroup.add(shipSprite);
+const HULL = 0x9b46dd;
+const CREST = 0xf07ad0;
+const BELLY = 0x2a1046;
+const THRUST = 0x66f6ff;
+
+const part = (geometry, color) =>
+  new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color, toneMapped: false }));
+
+// A delta, not a cone.
+//
+// The chase camera sits about six degrees above the ship. At that angle a cone
+// pointing away shows the player almost nothing but its base, so the first
+// rebuild read as a flat diamond - correct geometry, unreadable silhouette.
+// A wing flattened in Y keeps a triangular outline from a shallow angle, which
+// is why every game in this genre uses one.
+//
+// The flattening is baked into the geometry rather than set on the mesh:
+// Three composes scale before rotation, so scaling the mesh would have
+// squashed the wing along its length instead of its thickness.
+const delta = (radius, length, segments) =>
+  new THREE.ConeGeometry(radius, length, segments).rotateX(-Math.PI / 2).scale(1, 0.26, 1);
+
+const hull = part(delta(0.95, 1.9, 4), HULL);
+hull.position.z = -0.1;
+shipGroup.add(hull);
+
+// A darker underside and a brighter crest: with no lights in this scene, two
+// tones stacked on one shape are the only shading available.
+const belly = part(delta(0.86, 1.7, 4), BELLY);
+belly.position.set(0, -0.075, -0.05);
+shipGroup.add(belly);
+
+const crest = part(delta(0.3, 1.5, 4), CREST);
+crest.position.set(0, 0.085, -0.14);
+shipGroup.add(crest);
+
+// The wing's trailing edge sits at z = 0.85 (half of its 1.9 length, offset
+// by -0.1). The first pass put the engines at 0.76, i.e. inside the wing that
+// was supposed to be in front of them - the glow that sells "flying away" was
+// hidden by the ship's own body. Everything aft of the wing now clears it.
+const TAIL = 0.88;
+for (const side of [-1, 1]) {
+  const nacelle = part(new THREE.CylinderGeometry(0.14, 0.17, 0.66, 10), HULL);
+  nacelle.rotation.x = Math.PI / 2;
+  nacelle.position.set(side * 0.4, 0.035, TAIL - 0.1);
+  shipGroup.add(nacelle);
+
+  // A circle faces +Z by default, so the exhaust discs point straight at the
+  // camera. That is the whole reason for rebuilding the ship: the old sprite
+  // was drawn in side profile while the player flies away from the viewer.
+  const flame = part(new THREE.CircleGeometry(0.155, 16), THRUST);
+  flame.position.set(side * 0.4, 0.035, TAIL + 0.25);
+  shipGroup.add(flame);
+
+  const tip = part(new THREE.BoxGeometry(0.07, 0.05, 0.3), THRUST);
+  tip.position.set(side * 0.9, 0.01, TAIL - 0.12);
+  shipGroup.add(tip);
+}
+
+const core = part(new THREE.SphereGeometry(0.11, 12, 10), 0xffffff);
+core.position.set(0, 0.08, TAIL + 0.06);
+shipGroup.add(core);
+
+shipGroup.scale.setScalar(1.15);
 const shieldRing = new THREE.Mesh(
   new THREE.TorusGeometry(0.56, 0.035, 8, 32),
   new THREE.MeshBasicMaterial({ color: 0x6dff9e, toneMapped: false, transparent: true, opacity: 0.85 })
@@ -751,8 +840,8 @@ renderLeaderboard(scores);
 
 function refreshPowerupHud() {
   const chips = [];
-  if (shieldCharges > 0) chips.push(`<span class="powerchip"><img class="icon" src="assets/icon_shield.png" alt="">KALKAN x${shieldCharges}</span>`);
-  if (survivedT < magnetUntil) chips.push(`<span class="powerchip"><img class="icon" src="assets/icon_magnet.png" alt="">MIKNATIS ${Math.ceil(magnetUntil - survivedT)}s</span>`);
+  if (shieldCharges > 0) chips.push(`<span class="powerchip"><img class="icon" src="assets/icon_shield.png" alt="">${t.shield} x${shieldCharges}</span>`);
+  if (survivedT < magnetUntil) chips.push(`<span class="powerchip"><img class="icon" src="assets/icon_magnet.png" alt="">${t.magnet} ${Math.ceil(magnetUntil - survivedT)}s</span>`);
   if (survivedT < multUntil) chips.push(`<span class="powerchip"><img class="icon" src="assets/icon_mult.png" alt="">x2 ${Math.ceil(multUntil - survivedT)}s</span>`);
   powerupsEl.innerHTML = chips.join('');
 }
@@ -887,15 +976,19 @@ function updatePlaying(dt) {
 
   shipGroup.position.set(shipX, shipY, shipZ);
   shipGroup.rotation.x = THREE.MathUtils.clamp(velY * 0.06, -0.4, 0.4);
-  shipSprite.material.rotation = THREE.MathUtils.clamp(velX * 0.11, -0.5, 0.5);
+  // Roll opposite to the sideways velocity, so the ship banks into its turn.
+  // The sprite could only spin in the screen plane; a mesh actually leans.
+  shipGroup.rotation.z = THREE.MathUtils.clamp(-velX * 0.09, -0.5, 0.5);
   shieldRing.visible = shieldCharges > 0;
   if (shieldRing.visible) shieldRing.rotation.z += dt * 1.6;
 
-  // recycle rings
+  // recycle rings, and fade each by how far ahead it still is
   for (const ring of rings) {
     if (ring.position.z > shipZ + RECYCLE_MARGIN) {
       ring.position.z -= RING_COUNT * RING_SPACING;
     }
+    const depth = Math.min(Math.max((shipZ - ring.position.z) / RING_FADE, 0), 1);
+    ring.material.opacity = 0.1 + 0.8 * (1 - depth);
   }
 
   // recycle stars the same way - without this the field spans only
