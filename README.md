@@ -5,7 +5,7 @@
 ![Nova Drift oynanış kaydı: uzay tünelinde kırmızı engellerin arasından süzülen gemi, skor yukarı sayıyor](assets/gameplay.gif)
 
 <sub>Gerçek oynanış, montaj değil — <code>node test/capture-gif.js</code> oyunu testlerin kullandığı<br>
-aynı hermetik kurulumla açıp oynuyor ve kareleri yazıyor. Yukarıdaki kayıt 525 puanlık bir turdan.</sub>
+aynı hermetik kurulumla açıp oynuyor ve kareleri yazıyor. Yukarıdaki kayıt 446 puanlık bir turdan.</sub>
 
 ![License](https://img.shields.io/badge/license-MIT-a5d9ff?style=flat-square)
 ![Three.js](https://img.shields.io/badge/three.js-r160-ffb3d9?style=flat-square)
@@ -107,7 +107,7 @@ A quick tour of the moving parts under the hood — everything below is grounded
 - **18** torus rings sit `RING_SPACING = 7` units apart; once a ring falls more than `RECYCLE_MARGIN` behind the ship, it's teleported back to the far end of the chain instead of being destroyed and recreated
 - A `PerspectiveCamera` chases the ship with easing + lag on all three axes, banks on a Z-rotation driven by lateral velocity, and looks a fixed distance ahead down the tunnel
 - Speed ramps continuously from `BASE_SPEED` to `MAX_SPEED` the longer you survive, driving both the scroll rate and the score-per-second
-- A `FogExp2` fog and a full-screen AI-generated nebula texture (`assets/nebula.png`) sit behind everything to sell depth without extra geometry
+- A `FogExp2` fog and a full-screen nebula texture (`assets/nebula.webp`) sit behind everything to sell depth without extra geometry. Fog never touches a scene background, so the nebula renders at `backgroundIntensity = 0.2` — otherwise the one object nobody interacts with is the only one at full strength, and the gameplay reads as clutter on top of it
 
 ### Bloom Pipeline
 
@@ -165,7 +165,7 @@ Then open the printed local URL. It **must** be served over HTTP (not opened via
 
 ## Testing
 
-The Playwright suite is hermetic: Three.js is served from the pinned `three` devDependency and the Google Fonts stylesheet is stubbed, so a CDN outage cannot redden CI and the suite runs on an offline machine (`PW_CHROMIUM_PATH` points it at a preinstalled browser). Rendering adapts to the device: a 60-frame moving average of frame time lowers the render scale in 0.15 steps (floor 0.6) when frames exceed 20 ms and raises it in 0.1 steps below 12.5 ms, with a 2 s cooldown - the bloom pass is what a phone pays for, and it scales with pixel count.
+The Playwright suite is hermetic, and so is the game: Three.js and the font now ship in `vendor/`, so nothing is fetched at runtime and `no-external-requests.spec.js` fails if that ever changes. The older specs still load through a fixture that would answer a CDN from `node_modules`; that test deliberately does not, because the fixture would hide the very regression it exists to catch. The suite runs on an offline machine (`PW_CHROMIUM_PATH` points it at a preinstalled browser). Rendering adapts to the device: a 60-frame moving average of frame time lowers the render scale in 0.15 steps (floor 0.6) when frames exceed 20 ms and raises it in 0.1 steps below 12.5 ms, with a 2 s cooldown - the bloom pass is what a phone pays for, and it scales with pixel count.
 
 A small dev-only Playwright suite — doesn't add a build step to the game itself (still plain static HTML/CSS/JS):
 
@@ -191,16 +191,23 @@ nova-drift/
 │   ├── prng.spec.js        # seeded-RNG determinism, no browser rendering needed
 │   ├── smoke.spec.js       # console-error + Daily Challenge UI + manifest checks
 │   ├── adaptive.spec.js    # adaptive render-scale decision function, isolated + live
+│   ├── storage.spec.js     # the game with localStorage throwing on every call
+│   ├── no-external-requests.spec.js  # nothing may leave the origin
+│   ├── portal-sizes.spec.js  # the viewports Poki and CrazyGames require
+│   ├── language.spec.js    # English markup, Turkish overlaid on a Turkish browser
 │   ├── fixtures.js         # hermetic-CDN test helper shared by the specs above
-│   └── capture-gif.js      # dev-only: records gameplay frames for README visuals
-├── .github/workflows/ci.yml  # runs both test files on push/PR
+│   ├── capture-gif.js      # dev-only: records gameplay frames for README visuals
+│   └── capture-shot.js     # dev-only: a single still, for before/after on the art
+├── scripts/vendor-three.mjs  # copies the Three.js files the import graph reaches
+├── vendor/                  # Three.js + the font, shipped so nothing is fetched
+├── .github/workflows/ci.yml  # runs the suite on push/PR
 └── assets/
     ├── banner.svg              # hero graphic (this README)
     ├── diagram-how-it-works.svg
     ├── powerups-strip.svg
     ├── scoring-breakdown.svg
     ├── og-preview.png          # social-share preview image (Open Graph / Twitter Card)
-    ├── ship.png / nebula.png   # AI-generated art
+    ├── nebula.webp             # backdrop, 32 KB
     └── icon_shield.png / icon_magnet.png / icon_mult.png  # in-HUD icons
 ```
 
@@ -211,8 +218,8 @@ nova-drift/
 | **Engine** | [Three.js](https://threejs.org/) r160, loaded via an ES module import map from unpkg — no bundler, no `node_modules` |
 | **Rendering** | Real bloom post-processing (`EffectComposer` + `UnrealBloomPass`), ACES filmic tone mapping |
 | **Audio** | 100% synthesized with the Web Audio API — zero audio files |
-| **Markup / styling** | Plain HTML + CSS, `Orbitron` display font via Google Fonts |
-| **Art** | Ship sprite and nebula backdrop are AI-generated images; every line of game logic, rendering, and audio synthesis is hand-written |
+| **Markup / styling** | Plain HTML + CSS, `Orbitron` shipped with the game — the portals reject any external request |
+| **Art** | The ship is flat-coloured Three.js geometry, not a sprite: it is built along `-Z` so it reads as flying away from any angle and can actually bank into a turn. The nebula backdrop is an AI-generated image. Every line of game logic, rendering and audio synthesis is hand-written |
 | **Build step** | None. Clone it, serve it, play it |
 
 ## License
