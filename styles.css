@@ -1,3 +1,14 @@
+/* Orbitron, self-hosted. The game portals reject any external request, so the
+   font ships with the game instead of coming from Google Fonts. One variable
+   file covers all three weights. SIL Open Font License - see vendor/fonts/. */
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: swap;
+  src: url('vendor/fonts/orbitron-latin.woff2') format('woff2');
+}
+
 * {
   margin: 0;
   padding: 0;

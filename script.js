@@ -138,12 +138,27 @@ function dailySeed(date = new Date()) {
 function dailyStorageKey(date = new Date()) {
   return `novaDriftDaily-${todayUTCStamp(date)}`;
 }
+// localStorage does not merely return null when a browser refuses site data -
+// it throws. Safari's private mode and "block all cookies" both do it, and so
+// does an embedded portal frame on a third-party origin. Every read and write
+// goes through here so a blocked store behaves exactly like an empty one
+// rather than killing the script on the first line that touches it.
+const store = (() => {
+  const get = (key) => {
+    try { return localStorage.getItem(key); } catch { return null; }
+  };
+  const set = (key, value) => {
+    try { localStorage.setItem(key, value); return true; } catch { return false; }
+  };
+  return { get, set };
+})();
+
 function loadDailyBest() {
-  return Number(localStorage.getItem(dailyStorageKey()) || 0);
+  return Number(store.get(dailyStorageKey()) || 0);
 }
 function saveDailyBest(s) {
   const val = Math.floor(s);
-  localStorage.setItem(dailyStorageKey(), String(val));
+  store.set(dailyStorageKey(), String(val));
   return val;
 }
 
@@ -164,7 +179,7 @@ const sfx = (() => {
   let ctx = null;
   let master = null;
   let engineOsc = null, engineGain = null, engineFilter = null;
-  let muted = localStorage.getItem('novaDriftMuted') === '1';
+  let muted = store.get('novaDriftMuted') === '1';
 
   function ensure() {
     if (!ctx) {
@@ -265,7 +280,7 @@ const sfx = (() => {
 
   function setMuted(m) {
     muted = m;
-    localStorage.setItem('novaDriftMuted', m ? '1' : '0');
+    store.set('novaDriftMuted', m ? '1' : '0');
     if (master) master.gain.value = m ? 0 : 0.45;
   }
   function isMuted() { return muted; }
@@ -632,10 +647,10 @@ let multUntil = 0;
 // ---------- Local top-5 leaderboard ----------
 function loadScores() {
   try {
-    const raw = localStorage.getItem('novaDriftScores');
+    const raw = store.get('novaDriftScores');
     if (raw) return JSON.parse(raw);
   } catch { /* ignore malformed storage */ }
-  const legacyBest = Number(localStorage.getItem('novaDriftBest') || 0);
+  const legacyBest = Number(store.get('novaDriftBest') || 0);
   return legacyBest > 0 ? [legacyBest] : [];
 }
 function saveScore(s) {
@@ -643,7 +658,7 @@ function saveScore(s) {
   list.push(Math.floor(s));
   list.sort((a, b) => b - a);
   const top5 = list.slice(0, 5);
-  localStorage.setItem('novaDriftScores', JSON.stringify(top5));
+  store.set('novaDriftScores', JSON.stringify(top5));
   return top5;
 }
 function renderLeaderboard(list) {
