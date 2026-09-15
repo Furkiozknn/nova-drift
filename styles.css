@@ -176,11 +176,17 @@ canvas {
   text-align: center;
   padding: 24px;
   background: radial-gradient(ellipse at center, rgba(15, 4, 20, 0.35), rgba(5, 2, 12, 0.85));
-  transition: opacity 0.35s ease;
+  /* visibility is listed here so the fade still plays: going to hidden it
+     holds "visible" for the whole 0.35s and flips at the end, and coming back
+     it flips to visible immediately. */
+  transition: opacity 0.35s ease, visibility 0.35s ease;
 }
 .overlay.hidden {
   opacity: 0;
   pointer-events: none;
+  /* Without this the START / TRY AGAIN / RESUME buttons stay in the tab order
+     and are announced by screen readers while the overlay is invisible. */
+  visibility: hidden;
 }
 
 .overlay h1 {

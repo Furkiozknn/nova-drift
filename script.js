@@ -74,7 +74,12 @@ function onResize() {
   renderer.setSize(w, h);
   composer.setSize(w, h);
   bloomPass.resolution.set(w, h);
-  starMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
+  const pr = renderer.getPixelRatio();
+  starMat.uniforms.uPixelRatio.value = pr;
+  // Trail/burst particles size themselves off the same uniform; without this
+  // they keep the old ratio after an adaptive render-scale change and render
+  // at the wrong size.
+  trailMat.uniforms.uPixelRatio.value = pr;
 }
 window.addEventListener('resize', onResize);
 

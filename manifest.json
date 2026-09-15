@@ -1,18 +1,18 @@
 {
   "name": "Nova Drift",
   "short_name": "Nova Drift",
-  "description": "Bir ışık tünelinde engellerden kaçıp enerji küreleri topladığın hızlı bir uzay koşusu.",
+  "description": "A fast space run through a tunnel of light - dodge the rocks, grab the orbs.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "any",
   "background_color": "#05020c",
   "theme_color": "#05020c",
-  "lang": "tr",
+  "lang": "en",
   "icons": [
     {
       "src": "assets/favicon.png",
-      "sizes": "2048x2048",
+      "sizes": "64x64",
       "type": "image/png",
       "purpose": "any"
     }

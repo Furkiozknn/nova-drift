@@ -1,7 +1,12 @@
 {
-  "name": "nova-drift-tests",
+  "name": "nova-drift",
   "private": true,
   "description": "Dev-only Playwright smoke test for Nova Drift. The game itself has no build step and never will - this file exists purely so CI can load-test the live page in a browser.",
+  "homepage": "https://furkiozknn.github.io/nova-drift/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Furkiozknn/nova-drift.git"
+  },
   "scripts": {
     "test": "playwright test"
   },
