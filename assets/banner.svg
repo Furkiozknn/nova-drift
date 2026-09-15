@@ -100,9 +100,9 @@
   <text x="600" y="260" text-anchor="middle" font-family="Orbitron, 'Segoe UI', sans-serif" font-weight="700" font-size="19" fill="#e2d4eb" letter-spacing="7" opacity="0.85">AN ENDLESS ARCADE SPACE-TUNNEL DODGER</text>
 
   <!-- powerup legend -->
-  <text x="600" y="335" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="25" fill="#f5e9e9" opacity="0.95">🛡️ Shield &#160;&#160;&#160; 🧲 Magnet &#160;&#160;&#160; ✨ x2 Score &#160;&#160;&#160; 💥 Near-Miss Bonus</text>
+  <text x="600" y="335" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="25" fill="#f5e9e9" opacity="0.95">Shield     Magnet     x2 Score     Near-Miss Bonus</text>
 
   <!-- bottom hairline -->
   <rect x="330" y="376" width="540" height="1" fill="#a5d9ff" opacity="0.25"/>
-  <text x="600" y="402" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" letter-spacing="3" fill="#c9b8d6" opacity="0.7">THREE.JS &#8226; REAL BLOOM &#8226; SYNTHESIZED AUDIO &#8226; NO BUILD STEP</text>
+  <text x="600" y="402" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" letter-spacing="3" fill="#c9b8d6" opacity="0.7">THREE.JS • REAL BLOOM • SYNTHESIZED AUDIO • NO BUILD STEP</text>
 </svg>
