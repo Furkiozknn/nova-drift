@@ -161,7 +161,7 @@ No install, no build, no bundler:
 npx serve .
 ```
 
-Then open the printed local URL. It **must** be served over HTTP (not opened via `file://`) because `index.html` loads Three.js through an ES module import map pointed at `unpkg.com` — browsers block ES module imports from the `file://` origin. The game also now ships a `manifest.json` (installable as a fullscreen PWA — "Add to Home Screen" on mobile) and Open Graph/Twitter Card meta tags so a shared link renders a real preview.
+Then open the printed local URL. It **must** be served over HTTP (not opened via `file://`) because `index.html` loads Three.js through an ES module import map pointed at `./vendor/` — browsers block ES module imports from the `file://` origin. The game also now ships a `manifest.json` (installable as a fullscreen PWA — "Add to Home Screen" on mobile) and Open Graph/Twitter Card meta tags so a shared link renders a real preview.
 
 ## Testing
 
@@ -175,7 +175,7 @@ npx playwright install --with-deps chromium   # first run only
 npm test
 ```
 
-`test/prng.spec.js` verifies the Daily Challenge seeded RNG directly (no browser rendering needed): identical output across independent instances given the same day's seed, stable across a full UTC day, and different across days. `test/smoke.spec.js` loads the live page in a real browser and checks: no console errors with default and reduced-motion-emulated loads, the Daily Challenge toggle actually flips state, and `manifest.json` is present and well-formed. `test/adaptive.spec.js` verifies the adaptive render-scale decision function (drop/recover thresholds, hysteresis band, floor/ceiling) both in isolation and against the live page via the `?debug=1` hook. CI (`.github/workflows/ci.yml`) runs all three on every push/PR.
+`test/prng.spec.js` verifies the Daily Challenge seeded RNG directly (no browser rendering needed): identical output across independent instances given the same day's seed, stable across a full UTC day, and different across days. `test/smoke.spec.js` loads the live page in a real browser and checks: no console errors with default and reduced-motion-emulated loads, the Daily Challenge toggle actually flips state, and `manifest.json` is present and well-formed. `test/adaptive.spec.js` verifies the adaptive render-scale decision function (drop/recover thresholds, hysteresis band, floor/ceiling) both in isolation and against the live page via the `?debug=1` hook. CI (`.github/workflows/ci.yml`) runs all seven specs on every push/PR.
 
 ## Project Structure
 
@@ -215,7 +215,7 @@ nova-drift/
 
 | | |
 |---|---|
-| **Engine** | [Three.js](https://threejs.org/) r160, loaded via an ES module import map from unpkg — no bundler, no `node_modules` |
+| **Engine** | [Three.js](https://threejs.org/) r160, loaded via an ES module import map pointed at the vendored copy in `vendor/` — no bundler, no CDN, no `node_modules` at runtime |
 | **Rendering** | Real bloom post-processing (`EffectComposer` + `UnrealBloomPass`), ACES filmic tone mapping |
 | **Audio** | 100% synthesized with the Web Audio API — zero audio files |
 | **Markup / styling** | Plain HTML + CSS, `Orbitron` shipped with the game — the portals reject any external request |
