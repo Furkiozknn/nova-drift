@@ -7,17 +7,33 @@
 // protect - and the failure mode is silent: the daily leaderboard keeps
 // comparing scores from different patterns.
 //
-// `rng.js` exists so this imports the module the page itself loads. It is a
-// native ES module with no DOM and no Three.js in it, so Node can take it
-// directly - no build step, which is the property this repository is
-// otherwise built around.
+// `rng.js` exists so this reads the module the page itself loads. It is a
+// native ES module with no DOM and no Three.js in it - no build step, which
+// is the property this repository is otherwise built around.
+//
+// Why the bytes go through a `data:` URL instead of a plain
+// `import('../rng.js')`: this spec is CommonJS (Playwright's runner), the
+// repository has no `"type": "module"`, and a `.js` file with `export` in it
+// is therefore ambiguous. Node 22 guesses and reparses it as ESM with a
+// warning; the runner on Node 20 does not, and answers `SyntaxError:
+// Unexpected token 'export'`. That was a real red CI run against a suite
+// that was green locally. Importing the file's own bytes as a data: URL is
+// unambiguous on every version, and it is still the shipped file being
+// executed - `fs.readFileSync` of the exact path `script.js` imports - which
+// is the whole point of this file. The CI matrix runs both versions so the
+// claim is measured rather than assumed.
 const { test, expect } = require('@playwright/test');
+const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
+
+const RNG_PATH = path.resolve(__dirname, '..', 'rng.js');
 
 let rng;
 test.beforeAll(async () => {
-  rng = await import(pathToFileURL(path.resolve(__dirname, '..', 'rng.js')).href);
+  const source = fs.readFileSync(RNG_PATH);
+  rng = await import(
+    'data:text/javascript;base64,' + source.toString('base64')
+  );
 });
 
 test('the module under test is the one index.html loads', () => {

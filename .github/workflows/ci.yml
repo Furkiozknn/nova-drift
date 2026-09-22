@@ -14,12 +14,20 @@ concurrency:
 jobs:
   smoke-test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Two versions on purpose. The suite once went red here while green
+        # locally: a `.js` ES module is ambiguous without `"type": "module"`,
+        # and Node 22 reparses it while the runner on Node 20 does not. A
+        # single-version matrix could not have caught that.
+        node-version: ["20", "22"]
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
 
       - name: Install test deps
         run: npm install
