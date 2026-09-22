@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0.0",
+  "id": "nova-drift",
+  "owner": "Furkiozknn",
+  "repository": "https://github.com/Furkiozknn/nova-drift",
+  "homepage": "https://furkiozknn.github.io/nova-drift/",
+  "releases": "https://github.com/Furkiozknn/nova-drift/releases",
+  "status": "active",
+  "category": "game",
+  "platform": [
+    "web"
+  ],
+  "primary_language": "JavaScript",
+  "technologies": [
+    "JavaScript",
+    "Three.js r160",
+    "WebGL",
+    "Web Audio API",
+    "no build step"
+  ],
+  "version": null,
+  "license": "MIT",
+  "topics": [
+    "arcade-game",
+    "browser-game",
+    "endless-runner",
+    "game",
+    "gamedev",
+    "github-pages",
+    "html5-game",
+    "javascript",
+    "no-build",
+    "procedural-generation",
+    "threejs",
+    "threejs-game",
+    "web-audio-api",
+    "webgl",
+    "webgl-game"
+  ],
+  "summary": "Endless browser space-runner with real Three.js bloom, hand-written particles and an audio engine synthesized live in Web Audio - not one sound file in the repo. Skim an obstacle without touching it and take the near-miss bonus. A daily run seeded from the UTC date deals every player the same obstacles. 0.7 MB, no build step.",
+  "key_features": [
+    "Endless browser space-runner with real Three.js bloom post-processing and hand-written particles",
+    "Audio engine synthesized live in Web Audio - not one sound file in the repository",
+    "Skim an obstacle without touching it and take the near-miss bonus",
+    "A daily run seeded from the UTC date deals every player the same obstacles; 0.7 MB first load, no build step"
+  ],
+  "media": {
+    "hero": "assets/banner.svg",
+    "screenshots": [],
+    "gifs": [
+      "assets/gameplay.gif"
+    ],
+    "videos": []
+  },
+  "tests": {
+    "count": 28,
+    "source": "`28 passed` (Playwright)",
+    "measured": "2026-09-15"
+  },
+  "ci": {
+    "workflows": [
+      "ci.yml"
+    ],
+    "badge": "https://github.com/Furkiozknn/nova-drift/actions/workflows/ci.yml/badge.svg"
+  },
+  "docs": {
+    "readme": "README.md",
+    "changelog": null,
+    "roadmap": null,
+    "security": "SECURITY.md",
+    "contributing": "CONTRIBUTING.md",
+    "license_file": "LICENSE"
+  },
+  "social": {
+    "headline": "0.7 MB, no build step, real bloom - and every sound synthesized on the fly.",
+    "hashtags": [
+      "threejs",
+      "webgl",
+      "gamedev",
+      "javascript",
+      "webaudio"
+    ],
+    "primary_link": "https://furkiozknn.github.io/nova-drift/"
+  },
+  "provenance": {
+    "generated_at": "2026-09-22",
+    "generator": "ghcc/gen_meta.py",
+    "rule": "mechanical fields read from the repository and the GitHub API; editorial fields hand-written and reviewed; no field is generated from a guess"
+  }
+}
