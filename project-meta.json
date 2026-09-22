@@ -42,7 +42,8 @@
     "Endless browser space-runner with real Three.js bloom post-processing and hand-written particles",
     "Audio engine synthesized live in Web Audio - not one sound file in the repository",
     "Skim an obstacle without touching it and take the near-miss bonus",
-    "A daily run seeded from the UTC date deals every player the same obstacles; 0.7 MB first load, no build step"
+    "A daily run seeded from the UTC date deals every player the same obstacles; 0.7 MB first load, no build step",
+    "Every test runs with the page sealed to its own origin, so a reintroduced CDN import breaks CI instead of passing it"
   ],
   "media": {
     "hero": "assets/banner.svg",
@@ -53,9 +54,9 @@
     "videos": []
   },
   "tests": {
-    "count": 28,
-    "source": "`28 passed` (Playwright)",
-    "measured": "2026-09-15"
+    "count": 38,
+    "source": "`38 passed` (Playwright)",
+    "measured": "2026-09-22"
   },
   "ci": {
     "workflows": [

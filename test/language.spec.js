@@ -3,11 +3,11 @@
 // silent: a missing selector in the overlay leaves one English label sitting in
 // an otherwise Turkish screen, and nobody running an English browser sees it.
 const { test, expect } = require('@playwright/test');
-const { serveLocalCdn } = require('./fixtures');
+const { sealToOrigin } = require('./fixtures');
 
 test.describe('English browser', () => {
-  test('shows English and marks the document English', async ({ page }) => {
-    await serveLocalCdn(page);
+  test('shows English and marks the document English', async ({ page, baseURL }) => {
+    await sealToOrigin(page, baseURL);
     await page.goto('/index.html');
     await expect(page.locator('#startBtn')).toHaveText('START');
     await expect(page.locator('.tagline')).toHaveText('survive a tunnel of light');
@@ -19,8 +19,8 @@ test.describe('English browser', () => {
 test.describe('Turkish browser', () => {
   test.use({ locale: 'tr-TR' });
 
-  test('every overlaid label is Turkish', async ({ page }) => {
-    await serveLocalCdn(page);
+  test('every overlaid label is Turkish', async ({ page, baseURL }) => {
+    await sealToOrigin(page, baseURL);
     await page.goto('/index.html');
     await expect(page.locator('#startBtn')).toHaveText('BAŞLA');
     await expect(page.locator('.tagline')).toHaveText('bir ışık tünelinde hayatta kal');
@@ -28,8 +28,8 @@ test.describe('Turkish browser', () => {
     expect(await page.locator('html').getAttribute('lang')).toBe('tr');
   });
 
-  test('the game-over and pause screens are Turkish too', async ({ page }) => {
-    await serveLocalCdn(page);
+  test('the game-over and pause screens are Turkish too', async ({ page, baseURL }) => {
+    await sealToOrigin(page, baseURL);
     await page.goto('/index.html');
     // These screens are hidden at load, so an overlay that only translated the
     // visible start screen would still pass the test above.
@@ -39,8 +39,8 @@ test.describe('Turkish browser', () => {
     await expect(page.locator('#resumeBtn')).toHaveText('DEVAM ET');
   });
 
-  test('the score label follows the language', async ({ page }) => {
-    await serveLocalCdn(page);
+  test('the score label follows the language', async ({ page, baseURL }) => {
+    await sealToOrigin(page, baseURL);
     await page.goto('/index.html');
     await expect(page.locator('#best')).toContainText('EN İYİ');
   });

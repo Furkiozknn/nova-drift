@@ -8,7 +8,7 @@
 // These tests simulate that browser and assert the game is fully playable:
 // it starts, it scores, and it never asks the user to enable anything.
 const { test, expect } = require('@playwright/test');
-const { serveLocalCdn } = require('./fixtures');
+const { sealToOrigin } = require('./fixtures');
 
 /** Replace localStorage with one that throws on every operation. */
 async function blockStorage(page) {
@@ -28,8 +28,8 @@ function collectErrors(page) {
   return errors;
 }
 
-test('loads with storage blocked, no errors', async ({ page }) => {
-  await serveLocalCdn(page);
+test('loads with storage blocked, no errors', async ({ page, baseURL }) => {
+  await sealToOrigin(page, baseURL);
   await blockStorage(page);
   const errors = collectErrors(page);
   await page.goto('/index.html');
@@ -38,8 +38,8 @@ test('loads with storage blocked, no errors', async ({ page }) => {
   await expect(page.locator('#startBtn')).toBeVisible();
 });
 
-test('is playable with storage blocked', async ({ page }) => {
-  await serveLocalCdn(page);
+test('is playable with storage blocked', async ({ page, baseURL }) => {
+  await sealToOrigin(page, baseURL);
   await blockStorage(page);
   const errors = collectErrors(page);
   await page.goto('/index.html');
@@ -52,8 +52,8 @@ test('is playable with storage blocked', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('mute toggle survives a blocked write', async ({ page }) => {
-  await serveLocalCdn(page);
+test('mute toggle survives a blocked write', async ({ page, baseURL }) => {
+  await sealToOrigin(page, baseURL);
   await blockStorage(page);
   const errors = collectErrors(page);
   await page.goto('/index.html');

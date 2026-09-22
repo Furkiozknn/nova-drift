@@ -4,10 +4,12 @@
 // easily broken by accident: a font link, a CDN import, an analytics snippet.
 // Each looks harmless in a diff and each is a rejection.
 //
-// Deliberately does NOT use the serveLocalCdn fixture. That fixture answers
-// unpkg requests from node_modules, which is right for the other tests but
-// would hide exactly the regression this file exists to catch - the page
-// would still work in CI while being unshippable.
+// The first two tests deliberately do NOT use the sealToOrigin fixture: that
+// fixture aborts foreign requests, and a request that is aborted is still a
+// request that was made. These two have to *observe* the network rather than
+// cut it off, or a reintroduced CDN import would show up only as a failure
+// somewhere else. The third test seals, because its question is different:
+// not "did it ask" but "does it still work when nothing answers".
 const { test, expect } = require('@playwright/test');
 
 /** Requests that never leave the machine, whatever the page is doing. */

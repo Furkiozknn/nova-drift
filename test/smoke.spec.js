@@ -3,7 +3,7 @@
 // modes, and that manifest.json is well-formed. Does not change how the game
 // itself is built or served (still plain static HTML/CSS/JS, no bundler).
 const { test, expect } = require('@playwright/test');
-const { serveLocalCdn } = require('./fixtures');
+const { sealToOrigin } = require('./fixtures');
 
 function collectConsoleErrors(page) {
   const errors = [];
@@ -14,8 +14,8 @@ function collectConsoleErrors(page) {
   return errors;
 }
 
-test('loads with no console errors (default motion)', async ({ page }) => {
-  await serveLocalCdn(page);
+test('loads with no console errors (default motion)', async ({ page, baseURL }) => {
+  await sealToOrigin(page, baseURL);
   const errors = collectConsoleErrors(page);
   await page.goto('/index.html');
   await page.waitForTimeout(2000);
@@ -23,8 +23,8 @@ test('loads with no console errors (default motion)', async ({ page }) => {
   await expect(page.locator('#startBtn')).toBeVisible();
 });
 
-test('loads with no console errors (prefers-reduced-motion: reduce)', async ({ page }) => {
-  await serveLocalCdn(page);
+test('loads with no console errors (prefers-reduced-motion: reduce)', async ({ page, baseURL }) => {
+  await sealToOrigin(page, baseURL);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const errors = collectConsoleErrors(page);
   await page.goto('/index.html');
@@ -32,8 +32,8 @@ test('loads with no console errors (prefers-reduced-motion: reduce)', async ({ p
   expect(errors).toEqual([]);
 });
 
-test('Daily Challenge toggle flips label and reveals today\'s best', async ({ page }) => {
-  await serveLocalCdn(page);
+test('Daily Challenge toggle flips label and reveals today\'s best', async ({ page, baseURL }) => {
+  await sealToOrigin(page, baseURL);
   await page.goto('/index.html');
   const toggle = page.locator('#dailyToggleBtn');
   await expect(toggle).toHaveText('DAILY MODE: OFF');
@@ -44,8 +44,8 @@ test('Daily Challenge toggle flips label and reveals today\'s best', async ({ pa
   await expect(page.locator('#dailyInfoStart')).toBeVisible();
 });
 
-test('manifest.json is present and well-formed', async ({ page, request }) => {
-  await serveLocalCdn(page);
+test('manifest.json is present and well-formed', async ({ page, request, baseURL }) => {
+  await sealToOrigin(page, baseURL);
   await page.goto('/index.html');
   const manifestHref = await page.locator('link[rel="manifest"]').getAttribute('href');
   expect(manifestHref).toBe('manifest.json');

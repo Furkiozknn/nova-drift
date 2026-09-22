@@ -31,7 +31,9 @@ const ROOT = path.resolve(__dirname, '..');
   // Give the inline server a moment to bind before the browser asks for a page.
   await new Promise((r) => setTimeout(r, 600));
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(
+    process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
+  );
   const page = await browser.newPage({ viewport: { width: W, height: H } });
   await page.goto(`http://localhost:${PORT}/index.html`);
   await page.waitForSelector('#startBtn');

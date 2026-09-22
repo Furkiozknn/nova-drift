@@ -165,7 +165,7 @@ Then open the printed local URL. It **must** be served over HTTP (not opened via
 
 ## Testing
 
-The Playwright suite is hermetic, and so is the game: Three.js and the font now ship in `vendor/`, so nothing is fetched at runtime and `no-external-requests.spec.js` fails if that ever changes. The older specs still load through a fixture that would answer a CDN from `node_modules`; that test deliberately does not, because the fixture would hide the very regression it exists to catch. The suite runs on an offline machine (`PW_CHROMIUM_PATH` points it at a preinstalled browser). Rendering adapts to the device: a 60-frame moving average of frame time lowers the render scale in 0.15 steps (floor 0.6) when frames exceed 20 ms and raises it in 0.1 steps below 12.5 ms, with a 2 s cooldown - the bloom pass is what a phone pays for, and it scales with pixel count.
+The Playwright suite is hermetic, and so is the game: Three.js and the font ship in `vendor/`, so nothing is fetched at runtime. Every spec now runs with the page **sealed to its own origin** — any request to another origin is aborted, exactly as it would fail on a portal reviewer's network. That is a change of direction for the shared fixture, which used to *answer* CDN requests out of `node_modules`; back when the game still imported Three.js from unpkg that was right, and after it stopped it became a way for a reintroduced CDN import to pass CI while being unshippable. `no-external-requests.spec.js` keeps two tests that observe rather than seal, because an aborted request is still a request that was made. The suite runs on an offline machine (`PW_CHROMIUM_PATH` points it at a preinstalled browser, and the two capture scripts honour it too). Rendering adapts to the device: a 60-frame moving average of frame time lowers the render scale in 0.15 steps (floor 0.6) when frames exceed 20 ms and raises it in 0.1 steps below 12.5 ms, with a 2 s cooldown - the bloom pass is what a phone pays for, and it scales with pixel count.
 
 A small dev-only Playwright suite — doesn't add a build step to the game itself (still plain static HTML/CSS/JS):
 
@@ -175,7 +175,7 @@ npx playwright install --with-deps chromium   # first run only
 npm test
 ```
 
-`test/prng.spec.js` verifies the Daily Challenge seeded RNG directly (no browser rendering needed): identical output across independent instances given the same day's seed, stable across a full UTC day, and different across days. `test/smoke.spec.js` loads the live page in a real browser and checks: no console errors with default and reduced-motion-emulated loads, the Daily Challenge toggle actually flips state, and `manifest.json` is present and well-formed. `test/adaptive.spec.js` verifies the adaptive render-scale decision function (drop/recover thresholds, hysteresis band, floor/ceiling) both in isolation and against the live page via the `?debug=1` hook. CI (`.github/workflows/ci.yml`) runs all seven specs on every push/PR.
+`test/prng.spec.js` verifies the Daily Challenge seeded RNG directly (no browser rendering needed): identical output across independent instances given the same day's seed, stable across a full UTC day, different across days, and pinned to the exact sequence shipped today. It imports `rng.js` — the module `script.js` itself loads. It used to re-declare those functions and test the copy, with a comment asking whoever changed the game to please change the test too; a test of a copy cannot fail when the original changes, which made it blind to precisely the drift it was written to catch. `test/smoke.spec.js` loads the live page in a real browser and checks: no console errors with default and reduced-motion-emulated loads, the Daily Challenge toggle actually flips state, and `manifest.json` is present and well-formed. `test/adaptive.spec.js` verifies the adaptive render-scale decision function (drop/recover thresholds, hysteresis band, floor/ceiling) both in isolation and against the live page via the `?debug=1` hook. `test/font.spec.js` checks that the vendored woff2 is actually served and that Orbitron is the face the HUD renders in — the font is declared with a full fallback stack and `font-display: swap`, so a missing file breaks nothing except how the game looks. `test/vendor.spec.js` runs `scripts/vendor-three.mjs` into a throwaway directory and compares: `vendor/` has to be exactly what the pinned `three` produces, and regenerating must not delete `vendor/fonts/` — it used to, because the script began by removing the whole directory, so running the command `vendor/README.md` documents silently cost the game its font. CI (`.github/workflows/ci.yml`) runs all nine specs on every push/PR.
 
 ## Project Structure
 
@@ -183,7 +183,8 @@ npm test
 nova-drift/
 ├── index.html          # markup, HUD, overlays, import map, OG/Twitter meta
 ├── styles.css           # HUD, overlays, joystick, buttons, daily-mode UI
-├── script.js            # scene setup, game loop, audio, daily-seed RNG, everything
+├── script.js            # scene setup, game loop, audio, everything
+├── rng.js                # the daily seed + PRNG, alone so tests can import it
 ├── manifest.json         # PWA manifest (installable, fullscreen)
 ├── package.json           # dev-only: Playwright test runner
 ├── playwright.config.js   # dev-only: Playwright config (serves the page over http, no build)
@@ -195,7 +196,9 @@ nova-drift/
 │   ├── no-external-requests.spec.js  # nothing may leave the origin
 │   ├── portal-sizes.spec.js  # the viewports Poki and CrazyGames require
 │   ├── language.spec.js    # English markup, Turkish overlaid on a Turkish browser
-│   ├── fixtures.js         # hermetic-CDN test helper shared by the specs above
+│   ├── font.spec.js        # the vendored woff2 really loads; Orbitron is what renders
+│   ├── vendor.spec.js      # vendor/ matches the pinned three, and keeps the font
+│   ├── fixtures.js         # seals the page to its own origin, shared by the specs above
 │   ├── capture-gif.js      # dev-only: records gameplay frames for README visuals
 │   └── capture-shot.js     # dev-only: a single still, for before/after on the art
 ├── scripts/vendor-three.mjs  # copies the Three.js files the import graph reaches

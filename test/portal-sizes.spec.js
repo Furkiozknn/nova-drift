@@ -9,7 +9,7 @@
 // Checks the two things a reviewer checks first: can you start it, and does
 // anything sit outside the window.
 const { test, expect } = require('@playwright/test');
-const { serveLocalCdn } = require('./fixtures');
+const { sealToOrigin } = require('./fixtures');
 
 const SIZES = [
   { name: 'poki-min 640x360', width: 640, height: 360 },
@@ -42,8 +42,8 @@ async function overflowing(page) {
 }
 
 for (const size of SIZES) {
-  test(`starts and fits at ${size.name}`, async ({ page }) => {
-    await serveLocalCdn(page);
+  test(`starts and fits at ${size.name}`, async ({ page, baseURL }) => {
+    await sealToOrigin(page, baseURL);
     await page.setViewportSize({ width: size.width, height: size.height });
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
@@ -66,8 +66,8 @@ for (const size of SIZES) {
   });
 }
 
-test('canvas fills the window with no letterbox gap', async ({ page }) => {
-  await serveLocalCdn(page);
+test('canvas fills the window with no letterbox gap', async ({ page, baseURL }) => {
+  await sealToOrigin(page, baseURL);
   await page.setViewportSize({ width: 640, height: 360 });
   await page.goto('/index.html');
   const box = await page.locator('#scene').boundingBox();

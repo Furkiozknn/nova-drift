@@ -3,7 +3,7 @@
 // top-level Three.js/DOM side effects), and the live page is checked through
 // the opt-in debug hook to confirm the same function is what ships.
 const { test, expect } = require('@playwright/test');
-const { serveLocalCdn } = require('./fixtures');
+const { sealToOrigin } = require('./fixtures');
 
 const RENDER_SCALE_MIN = 0.6;
 function nextRenderScale(current, avgFrameMs) {
@@ -35,8 +35,8 @@ test('the hysteresis band holds steady between 12.5 ms and 20 ms', () => {
   }
 });
 
-test('the shipped page exposes the same decision function and a sane live scale', async ({ page }) => {
-  await serveLocalCdn(page);
+test('the shipped page exposes the same decision function and a sane live scale', async ({ page, baseURL }) => {
+  await sealToOrigin(page, baseURL);
   await page.goto('/index.html?debug=1');
   await page.waitForTimeout(1500);
   const probe = await page.evaluate(() => ({

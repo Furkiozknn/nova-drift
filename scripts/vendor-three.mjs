@@ -14,13 +14,33 @@
 //
 // It walks the real import graph from the entry points, so the set it copies
 // is whatever the code actually needs on the day it runs.
+//
+// WHAT THIS SCRIPT OWNS
+// ---------------------
+// Only the Three.js files and the note describing them. `vendor/` also holds
+// `fonts/orbitron-latin.woff2`, which comes from somewhere else entirely and
+// is what styles.css loads. An earlier version of this script began with
+// `rm -rf vendor/`, so running the very command vendor/README.md tells you to
+// run deleted the font - and nothing noticed. The font has `font-display:
+// swap` behind a full fallback stack, so the page still loaded, made no
+// external request and logged no error; it just quietly stopped being
+// Orbitron. So the deletion is now scoped to the files listed in OWNED, and
+// test/vendor.spec.js runs this script into a throwaway directory to prove
+// it leaves a `fonts/` sibling alone.
+//
+// A second argument sets the output directory (used by that test); with no
+// argument it writes to vendor/ as before.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const THREE = path.join(ROOT, 'node_modules', 'three');
-const VENDOR = path.join(ROOT, 'vendor');
+const VENDOR = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, 'vendor');
+
+//: The entries in vendor/ this script produces, and therefore the only ones
+//: it may remove. Anything else in that directory belongs to someone else.
+const OWNED = ['three.module.min.js', 'jsm', 'README.md'];
 
 // The addons script.js imports, as paths inside the three package.
 const ENTRIES = [
@@ -57,7 +77,10 @@ function copy(from, to) {
   return fs.statSync(to).size;
 }
 
-fs.rmSync(VENDOR, { recursive: true, force: true });
+for (const name of OWNED) {
+  fs.rmSync(path.join(VENDOR, name), { recursive: true, force: true });
+}
+fs.mkdirSync(VENDOR, { recursive: true });
 
 let total = copy(
   path.join(THREE, 'build', 'three.module.min.js'),
@@ -88,7 +111,18 @@ fs.writeFileSync(
     'These files are here so the game makes no external request, which is a',
     'hard requirement for the web game portals. MIT licensed, same as three.',
     '',
+    '`fonts/` is NOT generated and is not touched by that script - it holds the',
+    'Orbitron woff2 that styles.css loads. test/vendor.spec.js checks both:',
+    'that the files above match the pinned three, and that regenerating them',
+    'leaves the font alone.',
+    '',
   ].join('\n'),
 );
 
+const foreign = fs.readdirSync(VENDOR).filter((n) => !OWNED.includes(n));
 console.log(`${count} files, ${(total / 1024).toFixed(0)} KB from three@${version}`);
+console.log(
+  foreign.length
+    ? `left untouched in ${path.relative(ROOT, VENDOR) || '.'}/: ${foreign.join(', ')}`
+    : `nothing else in ${path.relative(ROOT, VENDOR) || '.'}/`,
+);

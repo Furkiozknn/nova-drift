@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { mulberry32, dailySeed, dailyStorageKey } from './rng.js';
 
 // ---------- Renderer / Scene / Camera ----------
 const canvas = document.getElementById('scene');
@@ -162,27 +163,11 @@ const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduce
 // player who plays on the same calendar day gets the exact same pattern and
 // scores are genuinely comparable. Regular endless mode leaves `spawnRng`
 // pointed at the real Math.random(), so its behavior is unchanged.
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-function todayUTCStamp(date = new Date()) {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const d = String(date.getUTCDate()).padStart(2, '0');
-  return `${y}${m}${d}`;
-}
-function dailySeed(date = new Date()) {
-  return Number(todayUTCStamp(date)); // e.g. 20260831
-}
-function dailyStorageKey(date = new Date()) {
-  return `novaDriftDaily-${todayUTCStamp(date)}`;
-}
+// mulberry32/todayUTCStamp/dailySeed/dailyStorageKey live in ./rng.js, which
+// touches neither the DOM nor Three - so test/prng.spec.js imports the file
+// this page actually loads instead of re-declaring a copy of it that can
+// silently drift from it.
+
 // localStorage does not merely return null when a browser refuses site data -
 // it throws. Safari's private mode and "block all cookies" both do it, and so
 // does an embedded portal frame on a third-party origin. Every read and write

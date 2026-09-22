@@ -4,15 +4,16 @@
  * Neden bir betik: README'deki hareketli görsel elle çekilirse her
  * güncellemede yeniden çekmek gerekir ve "bu gerçekten oyunun kendisi mi"
  * sorusunun cevabı kaybolur. Bu betik oyunu testlerin kullandığı aynı
- * hermetik kurulumla açar (three.js CDN'den değil, devDependency'den),
- * gerçekten oynar ve kareleri diske yazar. ffmpeg'e devri çağıran tarafta.
+ * hermetik kurulumla açar - sayfa kendi kaynağına mühürlenir, yani kayıt
+ * dışarıdan hiçbir şeyin gelmediği bir ağda çekilir - gerçekten oynar ve
+ * kareleri diske yazar. ffmpeg'e devri çağıran tarafta.
  *
  * Kullanım:  node test/capture-gif.js [cikti-dizini] [kare-sayisi]
  */
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('@playwright/test');
-const { serveLocalCdn } = require('./fixtures');
+const { sealToOrigin } = require('./fixtures');
 
 const OUT = process.argv[2] || path.join(__dirname, '..', '.capture');
 const FRAMES = Number(process.argv[3] || 56);
@@ -67,9 +68,11 @@ function serve() {
   fs.mkdirSync(OUT, { recursive: true });
   const server = await serve();
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(
+    process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
+  );
   const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
-  await serveLocalCdn(page);
+  await sealToOrigin(page, `http://127.0.0.1:${PORT}`);
 
   const hatalar = [];
   page.on('console', (m) => { if (m.type() === 'error') hatalar.push(m.text()); });
