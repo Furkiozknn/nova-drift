@@ -47,16 +47,17 @@
   ],
   "media": {
     "hero": "assets/banner.svg",
-    "screenshots": [],
-    "gifs": [
-      "assets/gameplay.gif"
+    "screenshots": [
+      "assets/gameplay.webp",
+      "assets/screenshot.webp"
     ],
+    "gifs": [],
     "videos": []
   },
   "tests": {
-    "count": 38,
-    "source": "`38 passed` (Playwright)",
-    "measured": "2026-09-22"
+    "count": 42,
+    "source": "`42 passed` (Playwright)",
+    "measured": "2026-09-25"
   },
   "ci": {
     "workflows": [
