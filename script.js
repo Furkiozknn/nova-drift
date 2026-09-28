@@ -743,6 +743,20 @@ window.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 
+// A keyup that happens while another window has focus never reaches the page,
+// so a key held during an alt-tab would stay "held" and steer the ship into
+// the wall after the player came back. Forget held keys when focus goes, and
+// pause the run rather than let it play on unattended.
+function onFocusLost() {
+  keys.clear();
+  joyEnd();
+  if (state === 'playing') pauseGame();
+}
+window.addEventListener('blur', onFocusLost);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') onFocusLost();
+});
+
 // ---------- Game state ----------
 let state = 'idle'; // idle | playing | paused | gameover
 let shipX = 0, shipY = 0, shipZ = 0;
@@ -1148,6 +1162,7 @@ if (new URLSearchParams(window.location.search).get('debug') === '1') {
     getSpawnLog() { return spawnLog.slice(); },
     dailySeed,
     getRenderScale() { return renderScale; },
+    heldKeys() { return [...keys]; },
     nextRenderScale,
   };
 }

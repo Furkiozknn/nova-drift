@@ -37,26 +37,27 @@
     "webgl",
     "webgl-game"
   ],
-  "summary": "Endless browser space-runner with real Three.js bloom, hand-written particles and an audio engine synthesized live in Web Audio - not one sound file in the repo. Skim an obstacle without touching it and take the near-miss bonus. A daily run seeded from the UTC date deals every player the same obstacles. 0.7 MB, no build step.",
+  "summary": "Endless browser space-runner with real Three.js bloom, hand-written particles and an audio engine synthesized live in Web Audio - not one sound file in the repo. Skim an obstacle without touching it and take the near-miss bonus. A daily run seeded from the UTC date deals every player the same obstacles. 0.8 MB, no build step.",
   "key_features": [
     "Endless browser space-runner with real Three.js bloom post-processing and hand-written particles",
     "Audio engine synthesized live in Web Audio - not one sound file in the repository",
     "Skim an obstacle without touching it and take the near-miss bonus",
-    "A daily run seeded from the UTC date deals every player the same obstacles; 0.7 MB first load, no build step",
+    "A daily run seeded from the UTC date deals every player the same obstacles; 0.8 MB first load, no build step",
     "Every test runs with the page sealed to its own origin, so a reintroduced CDN import breaks CI instead of passing it"
   ],
   "media": {
     "hero": "assets/banner.svg",
-    "screenshots": [],
-    "gifs": [
-      "assets/gameplay.gif"
+    "screenshots": [
+      "assets/gameplay.webp",
+      "assets/screenshot.webp"
     ],
+    "gifs": [],
     "videos": []
   },
   "tests": {
-    "count": 38,
-    "source": "`38 passed` (Playwright)",
-    "measured": "2026-09-22"
+    "count": 42,
+    "source": "`42 passed` (Playwright)",
+    "measured": "2026-09-25"
   },
   "ci": {
     "workflows": [
@@ -74,7 +75,7 @@
     "license_file": "LICENSE"
   },
   "social": {
-    "headline": "0.7 MB, no build step, real bloom - and every sound synthesized on the fly.",
+    "headline": "0.8 MB, no build step, real bloom - and every sound synthesized on the fly.",
     "hashtags": [
       "threejs",
       "webgl",

@@ -6,9 +6,21 @@
  * sorusunun cevabı kaybolur. Bu betik oyunu testlerin kullandığı aynı
  * hermetik kurulumla açar - sayfa kendi kaynağına mühürlenir, yani kayıt
  * dışarıdan hiçbir şeyin gelmediği bir ağda çekilir - gerçekten oynar ve
- * kareleri diske yazar. ffmpeg'e devri çağıran tarafta.
+ * kareleri diske yazar. ffmpeg'e devri çağıran tarafta (README "Demo
+ * kaydını yeniden üretmek" bölümündeki komutlar).
  *
- * Kullanım:  node test/capture-gif.js [cikti-dizini] [kare-sayisi]
+ * Zaman: oyun saati Playwright'ın sahte saatiyle (`page.clock`) kare başına
+ * tam 1/FPS saniye ilerletiliyor. Eskiden kareler arasında gerçek zamanda
+ * 45 ms bekleniyordu; yazılım GPU'lu bir makinede ekran görüntüsünün kendisi
+ * değişken süre aldığı için oyun kareler arasında düzensiz ilerliyordu ve
+ * kayıt takılarak oynuyordu. Sahte saatte her kare eşit aralıklı, oyun kodu
+ * ise aynen gönderilen kod - yalnızca `performance.now` ve
+ * `requestAnimationFrame` saati kontrol ediliyor.
+ *
+ * Dil: tarayıcı `en-US` açılıyor; oyun Türkçe tarayıcıda HUD'u Türkçeye
+ * çeviriyor ve README İngilizce.
+ *
+ * Kullanım:  node test/capture-gif.js [cikti-dizini] [kare-sayisi] [fps]
  */
 const fs = require('fs');
 const path = require('path');
@@ -16,18 +28,23 @@ const { chromium } = require('@playwright/test');
 const { sealToOrigin } = require('./fixtures');
 
 const OUT = process.argv[2] || path.join(__dirname, '..', '.capture');
-const FRAMES = Number(process.argv[3] || 56);
+const FRAMES = Number(process.argv[3] || 150);
+const FPS = Number(process.argv[4] || 25);
+const ADIM = 1000 / FPS;
 const PORT = 8799;
 
 // Gemiyi gezdiren tuş programı: kısa basışlar, merkeze dönen bir salınım.
 // İlk sürüm uzun basışlar kullanıyordu ve gemi 25. karede duvara giriyordu -
 // README'ye "ÇARPIŞMA" ekranı düşüyordu. Kısa basış + geri dönüş, gemiyi
 // tünelin ortasında tutuyor.
+// Adetler kare sayısı; sahte saatle bir kare 1/FPS saniye.
 const PLAN = [
-  ['ArrowLeft', 3], ['ArrowRight', 3], ['ArrowUp', 2], ['ArrowDown', 2],
-  ['ArrowRight', 3], ['ArrowLeft', 3], ['ArrowDown', 2], ['ArrowUp', 2],
-  ['ArrowLeft', 2], ['ArrowRight', 2], ['ArrowUp', 3], ['ArrowDown', 3],
-  ['ArrowRight', 2], ['ArrowLeft', 2], ['ArrowDown', 2], ['ArrowUp', 2],
+  ['ArrowLeft', 8], ['ArrowRight', 8], ['ArrowUp', 6], ['ArrowDown', 6],
+  ['ArrowRight', 8], ['ArrowLeft', 8], ['ArrowDown', 6], ['ArrowUp', 6],
+  ['ArrowLeft', 6], ['ArrowRight', 6], ['ArrowUp', 8], ['ArrowDown', 8],
+  ['ArrowRight', 6], ['ArrowLeft', 6], ['ArrowDown', 6], ['ArrowUp', 6],
+  ['ArrowLeft', 8], ['ArrowRight', 8], ['ArrowUp', 6], ['ArrowDown', 6],
+  ['ArrowRight', 8], ['ArrowLeft', 8], ['ArrowDown', 6], ['ArrowUp', 6],
 ];
 
 /**
@@ -48,7 +65,7 @@ function serve() {
   const root = path.join(__dirname, '..');
   const types = { '.html': 'text/html', '.js': 'application/javascript',
     '.css': 'text/css', '.json': 'application/json', '.png': 'image/png',
-    '.svg': 'image/svg+xml' };
+    '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2' };
   return new Promise((resolve) => {
     const s = http.createServer((req, res) => {
       const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '') || 'index.html';
@@ -71,15 +88,16 @@ function serve() {
   const browser = await chromium.launch(
     process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
   );
-  const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
+  const page = await browser.newPage({ viewport: { width: 960, height: 540 }, locale: 'en-US' });
   await sealToOrigin(page, `http://127.0.0.1:${PORT}`);
+  await page.clock.install();
 
   const hatalar = [];
   page.on('console', (m) => { if (m.type() === 'error') hatalar.push(m.text()); });
 
   await page.goto(`http://127.0.0.1:${PORT}/index.html`);
   await page.waitForSelector('#startBtn', { state: 'visible' });
-  await page.waitForTimeout(1200);          // sahne otursun
+  await page.clock.runFor(1200);            // sahne otursun
 
   // Birkaç tur dene, en uzun yaşayanı tut. Tek tur yeterli olmuyor: gemi
   // erken çarparsa elde 20 kare kalıyor ve GIF bir saniye sürüyor.
@@ -91,10 +109,10 @@ function serve() {
     if (tur > 1) {
       await page.reload();
       await page.waitForSelector('#startBtn', { state: 'visible' });
-      await page.waitForTimeout(600);
+      await page.clock.runFor(600);
     }
     await page.click('#startBtn');
-    await page.waitForTimeout(900);         // ilk kareler bos olmasin
+    await page.clock.runFor(900);           // ilk kareler bos olmasin
 
     let n = 0;
     for (const [tus, adet] of PLAN) {
@@ -104,14 +122,14 @@ function serve() {
         if (await oldu(page)) break;
         await page.screenshot({ path: path.join(gecici, `k${String(n).padStart(3, '0')}.png`) });
         n++;
-        await page.waitForTimeout(45);
+        await page.clock.runFor(ADIM);
       }
       await page.keyboard.up(tus).catch(() => {});
     }
     while (n < FRAMES && !(await oldu(page))) {
       await page.screenshot({ path: path.join(gecici, `k${String(n).padStart(3, '0')}.png`) });
       n++;
-      await page.waitForTimeout(45);
+      await page.clock.runFor(ADIM);
     }
     const skor = (await page.locator('#score').textContent().catch(() => '0')) || '0';
     console.log(`  tur ${tur}: ${n} kare, skor ${skor.trim()}`);
