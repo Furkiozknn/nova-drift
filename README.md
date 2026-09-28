@@ -1,5 +1,8 @@
 ![Nova Drift](assets/banner.svg)
 
+<p align="center"><img src="docs/reel/reel.gif" alt="nova-drift - 15 saniyelik tanıtım videosu" width="720"></p>
+<p align="center"><sub><a href="docs/reel/reel.mp4">Sesli MP4 sürümü</a></sub></p>
+
 <div align="center">
 
 ![Nova Drift oynanış kaydı: uzay tünelinde kırmızı engellerin arasından süzülen gemi, skor yukarı sayıyor](assets/gameplay.gif)
