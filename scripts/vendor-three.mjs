@@ -18,7 +18,7 @@
 // WHAT THIS SCRIPT OWNS
 // ---------------------
 // Only the Three.js files and the note describing them. `vendor/` also holds
-// `fonts/orbitron-latin.woff2`, which comes from somewhere else entirely and
+// `fonts/*.woff2`, which comes from somewhere else entirely and
 // is what styles.css loads. An earlier version of this script began with
 // `rm -rf vendor/`, so running the very command vendor/README.md tells you to
 // run deleted the font - and nothing noticed. The font has `font-display:
@@ -112,7 +112,7 @@ fs.writeFileSync(
     'hard requirement for the web game portals. MIT licensed, same as three.',
     '',
     '`fonts/` is NOT generated and is not touched by that script - it holds the',
-    'Orbitron woff2 that styles.css loads. test/vendor.spec.js checks both:',
+    'Instrument Sans + JetBrains Mono woff2 subsets that styles.css loads. test/vendor.spec.js checks both:',
     'that the files above match the pinned three, and that regenerating them',
     'leaves the font alone.',
     '',

@@ -24,7 +24,17 @@ scene.background.colorSpace = THREE.SRGBColorSpace;
 // a backdrop; everything the player must react to is emissive and unaffected.
 scene.backgroundIntensity = 0.2;
 
-const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
+// 72 deg vertical is right for landscape. In portrait that leaves only ~45 deg
+// across, and the ship's edge positions (+-2.25 at 4.4 units from the camera)
+// fall off-screen; below 1:1 the field of view widens so the whole play area
+// stays visible (horizontal >= ~58 deg).
+function baseFov(aspect) {
+  if (aspect >= 1) return 72;
+  const half = THREE.MathUtils.degToRad(29);
+  return Math.min(96, THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(half) / aspect)));
+}
+let fovBase = baseFov(window.innerWidth / window.innerHeight);
+const camera = new THREE.PerspectiveCamera(fovBase, window.innerWidth / window.innerHeight, 0.1, 200);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
@@ -32,45 +42,81 @@ const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, windo
 composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
 
-// ---------- Language ----------
-// The markup is English because that is what a portal reviewer and most of the
-// world will read, and because it still reads correctly if this script never
-// runs. A Turkish browser gets Turkish laid over it.
-//
-// Twenty strings do not justify an i18n library; a library for twenty strings
-// is the bug, not the fix. One dictionary, decided once at load.
-const TR = (navigator.language || '').toLowerCase().startsWith('tr');
-const t = TR
-  ? { best: 'EN İYİ', today: 'BUGÜN', dailyOn: 'GÜNLÜK MOD: AÇIK',
-      dailyOff: 'GÜNLÜK MOD: KAPALI', noScores: 'henüz skor yok',
-      shield: 'KALKAN', magnet: 'MIKNATIS' }
-  : { best: 'BEST', today: 'TODAY', dailyOn: 'DAILY MODE: ON',
-      dailyOff: 'DAILY MODE: OFF', noScores: 'no scores yet',
-      shield: 'SHIELD', magnet: 'MAGNET' };
-
-if (TR) {
-  const tr = {
-    '.tagline': 'bir ışık tünelinde hayatta kal',
-    '#modeTag': 'GÜNLÜK MOD',
-    '#startBtn': 'BAŞLA',
-    '#restartBtn': 'TEKRAR DENE',
-    '#resumeBtn': 'DEVAM ET',
-    '.pauseTitle': 'DURAKLATILDI',
-    '#gameOverScreen h2': 'ÇARPIŞMA',
-    '#newBest': 'yeni rekor!',
-    '#newDailyBest': '(yeni günlük rekor!)',
+// localStorage does not merely return null when a browser refuses site data -
+// it throws. Safari's private mode and "block all cookies" both do it, and so
+// does an embedded portal frame on a third-party origin. Every read and write
+// goes through here so a blocked store behaves exactly like an empty one
+// rather than killing the script on the first line that touches it.
+const store = (() => {
+  const get = (key) => {
+    try { return localStorage.getItem(key); } catch { return null; }
   };
-  for (const [sel, text] of Object.entries(tr)) {
-    const el = document.querySelector(sel);
-    if (el) el.textContent = text;
+  const set = (key, value) => {
+    try { localStorage.setItem(key, value); return true; } catch { return false; }
+  };
+  return { get, set };
+})();
+
+// ---------- Language ----------
+// English is the source language in the markup (it still reads correctly if
+// this script never runs). Default follows the browser; the player's own
+// choice (Settings) is kept under a NEW key, so no old save is touched.
+// Two dictionaries for ~40 strings do not justify an i18n library.
+const STR = {
+  en: {
+    best: 'BEST', today: 'TODAY', dailyOn: 'DAILY MODE: ON', dailyOff: 'DAILY MODE: OFF',
+    noScores: 'no scores yet', shield: 'SHIELD', magnet: 'MAGNET',
+    modeTag: 'DAILY MODE', free: 'FREE · IN YOUR BROWSER', play: 'PLAY',
+    how: 'Steer with mouse, touch or arrows. Grab the cyan orbs, dodge the red rocks.',
+    settings: 'SETTINGS', todayBest: "today's best", runEnded: 'RUN ENDED', newRecord: 'NEW RECORD',
+    newDaily: '(new daily best!)', again: 'TRY AGAIN', menu: 'MENU', paused: 'PAUSED', resume: 'RESUME',
+    restart: 'RESTART', sound: 'Sound', language: 'Language', done: 'DONE', on: 'ON', off: 'OFF',
+    pause: 'Pause', muteAria: 'Mute or unmute',
+    hintPointer: 'Move the mouse to steer · collect cyan orbs · avoid red rocks',
+    hintTouch: 'Drag anywhere to steer · collect cyan orbs · avoid red rocks',
+    hintKeys: 'Arrows / WASD also steer · Esc pauses',
+    bestLine: 'BEST',
+  },
+  tr: {
+    best: 'EN İYİ', today: 'BUGÜN', dailyOn: 'GÜNLÜK MOD: AÇIK', dailyOff: 'GÜNLÜK MOD: KAPALI',
+    noScores: 'henüz skor yok', shield: 'KALKAN', magnet: 'MIKNATIS',
+    modeTag: 'GÜNLÜK MOD', free: 'ÜCRETSİZ · TARAYICIDA', play: 'OYNA',
+    how: 'Fare, dokunmatik ya da oklarla yönlendir. Camgöbeği küreleri topla, kırmızı kayalardan kaç.',
+    settings: 'AYARLAR', todayBest: 'bugünün en iyisi', runEnded: 'KOŞU BİTTİ', newRecord: 'YENİ REKOR',
+    newDaily: '(yeni günlük rekor!)', again: 'TEKRAR DENE', menu: 'MENÜ', paused: 'DURAKLATILDI', resume: 'DEVAM ET',
+    restart: 'BAŞTAN', sound: 'Ses', language: 'Dil', done: 'TAMAM', on: 'AÇIK', off: 'KAPALI',
+    pause: 'Duraklat', muteAria: 'Sesi aç veya kapat',
+    hintPointer: 'Yönlendirmek için fareyi oynat · camgöbeği küreleri topla · kırmızı kayalardan kaç',
+    hintTouch: 'Yönlendirmek için ekranda sürükle · camgöbeği küreleri topla · kırmızı kayalardan kaç',
+    hintKeys: 'Oklar / WASD de çalışır · Esc duraklatır',
+    bestLine: 'EN İYİ',
+  },
+};
+// The player's stored choice wins; otherwise `tr*` browsers get Turkish and
+// everyone else English. A blocked store behaves like an empty one.
+let lang = (() => {
+  const saved = store.get('novaDriftLang');
+  if (saved === 'tr' || saved === 'en') return saved;
+  return (navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+})();
+const t = new Proxy({}, { get: (_, k) => STR[lang][k] });
+const coarsePointer = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+function applyLang() {
+  document.documentElement.lang = lang;
+  for (const el of document.querySelectorAll('[data-i18n]')) {
+    const v = STR[lang][el.dataset.i18n];
+    if (v !== undefined) el.textContent = v;
   }
-  document.documentElement.lang = 'tr';
+  for (const el of document.querySelectorAll('[data-i18n-aria]')) {
+    el.setAttribute('aria-label', STR[lang][el.dataset.i18nAria]);
+  }
 }
 
 function onResize() {
   const w = window.innerWidth, h = window.innerHeight;
   if (w === 0 || h === 0) return;
   camera.aspect = w / h;
+  camera.fov = fovBase = baseFov(camera.aspect);
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
   composer.setSize(w, h);
@@ -167,21 +213,6 @@ const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduce
 // touches neither the DOM nor Three - so test/prng.spec.js imports the file
 // this page actually loads instead of re-declaring a copy of it that can
 // silently drift from it.
-
-// localStorage does not merely return null when a browser refuses site data -
-// it throws. Safari's private mode and "block all cookies" both do it, and so
-// does an embedded portal frame on a third-party origin. Every read and write
-// goes through here so a blocked store behaves exactly like an empty one
-// rather than killing the script on the first line that touches it.
-const store = (() => {
-  const get = (key) => {
-    try { return localStorage.getItem(key); } catch { return null; }
-  };
-  const set = (key, value) => {
-    try { localStorage.setItem(key, value); return true; } catch { return false; }
-  };
-  return { get, set };
-})();
 
 function loadDailyBest() {
   return Number(store.get(dailyStorageKey()) || 0);
@@ -319,11 +350,15 @@ const sfx = (() => {
 })();
 
 const muteBtn = document.getElementById('muteBtn');
-muteBtn.textContent = sfx.isMuted() ? '🔇' : '🔊';
-muteBtn.addEventListener('click', () => {
-  sfx.setMuted(!sfx.isMuted());
-  muteBtn.textContent = sfx.isMuted() ? '🔇' : '🔊';
-});
+const soundToggle = document.getElementById('soundToggle');
+function refreshSoundUI() {
+  muteBtn.setAttribute('aria-pressed', String(sfx.isMuted()));
+  soundToggle.setAttribute('aria-pressed', String(!sfx.isMuted()));
+  soundToggle.textContent = sfx.isMuted() ? t.off : t.on;
+}
+function toggleMute() { sfx.setMuted(!sfx.isMuted()); refreshSoundUI(); }
+muteBtn.addEventListener('click', toggleMute);
+soundToggle.addEventListener('click', () => { toggleMute(); sfx.click(); });
 
 // ---------- Screen shake + hit flash ----------
 let shakeT = 0, shakeMag = 0;
@@ -732,12 +767,15 @@ canvas.addEventListener('touchcancel', joyEnd, { passive: true });
 
 window.addEventListener('keydown', (e) => {
   keys.add(e.code);
-  if ((e.code === 'Space' || e.code === 'Enter') && (state === 'idle' || state === 'gameover')) {
+  // Space / Enter on a focused button must click that button, not start a run.
+  const onButton = !!(e.target && e.target.closest && e.target.closest('button'));
+  if ((e.code === 'Space' || e.code === 'Enter') && !onButton && !settingsOpen && (state === 'idle' || state === 'gameover')) {
     e.preventDefault();
-    startGame();
+    if (state === 'idle') beginFromMenu(); else startGame();
   }
   if (e.code === 'Escape') {
-    if (state === 'playing') pauseGame();
+    if (settingsOpen) closeSettings();
+    else if (state === 'playing') pauseGame();
     else if (state === 'paused') resumeGame();
   }
 });
@@ -817,9 +855,123 @@ const dailyBestStartEl = document.getElementById('dailyBestStart');
 const dailyInfoEndEl = document.getElementById('dailyInfoEnd');
 const dailyBestEndEl = document.getElementById('dailyBestEnd');
 const newDailyBestEl = document.getElementById('newDailyBest');
-document.getElementById('startBtn').addEventListener('click', () => { sfx.click(); startGame(); });
+const hintEl = document.getElementById('hint');
+const settingsScreen = document.getElementById('settingsScreen');
+const bandEl = document.getElementById('band');
+const bestLineEl = document.getElementById('bestLine');
+const recMode = new URLSearchParams(window.location.search).get('rec') === '1';
+if (recMode) document.body.classList.add('rec');
+
+// Palette accents cycled by the score tiers, the screen band and the cards:
+// the video's cyan / violet / pink bands plus amber + mint from the "Derin uzay"
+// theme. Contrast against the ink background is asserted in test/contrast.spec.js.
+const ACCENTS = ['#eef1ff', '#7bdff6', '#b5a4fa', '#f577b2', '#ffab40', '#7dffc8'];
+let bandIx = 0;
+
+// Screen change: a palette-coloured iris closes (260 ms), the change happens
+// under it, then it fades (200 ms). Skipped for reduced motion. Not used for
+// TRY AGAIN: a retry has to be instant.
+function withBand(fn) {
+  if (reducedMotion || recMode) { fn(); return; }
+  bandEl.style.background = ACCENTS[1 + (bandIx++ % (ACCENTS.length - 1))];
+  bandEl.className = 'cover';
+  setTimeout(() => {
+    fn();
+    bandEl.className = 'reveal';
+    setTimeout(() => { bandEl.className = ''; }, 220);
+  }, 260);
+}
+function beginFromMenu() { withBand(startGame); }
+
+// An overlay's `visibility` is still transitioning on the frame it is
+// un-hidden, and a button inside it cannot take focus until that ends.
+function focusSoon(el, tries = 8) {
+  setTimeout(() => {
+    el.focus({ preventScroll: true });
+    if (document.activeElement !== el && tries > 0) focusSoon(el, tries - 1);
+  }, 30);
+}
+
+let settingsOpen = false;
+let settingsReturnFocus = null;
+function openSettings() {
+  settingsOpen = true;
+  settingsReturnFocus = document.activeElement;
+  syncLangButtons();
+  refreshSoundUI();
+  settingsScreen.classList.remove('hidden');
+  focusSoon(document.getElementById('settingsDoneBtn'));
+}
+function closeSettings() {
+  settingsOpen = false;
+  settingsScreen.classList.add('hidden');
+  if (settingsReturnFocus && settingsReturnFocus.focus) focusSoon(settingsReturnFocus);
+}
+function syncLangButtons() {
+  document.getElementById('langEn').setAttribute('aria-pressed', String(lang === 'en'));
+  document.getElementById('langTr').setAttribute('aria-pressed', String(lang === 'tr'));
+}
+function setLang(l) {
+  if (l === lang) return;
+  lang = l;
+  store.set('novaDriftLang', l);
+  // "kararma" (fade) transition of the daily-video set: the text swaps under a 250 ms fade-in.
+  document.body.classList.remove('langswap');
+  void document.body.offsetWidth;
+  document.body.classList.add('langswap');
+  refreshUI();
+  syncLangButtons();
+}
+document.getElementById('langEn').addEventListener('click', () => { sfx.click(); setLang('en'); });
+document.getElementById('langTr').addEventListener('click', () => { sfx.click(); setLang('tr'); });
+document.getElementById('settingsBtn').addEventListener('click', () => { sfx.click(); openSettings(); });
+document.getElementById('pauseSettingsBtn').addEventListener('click', () => { sfx.click(); openSettings(); });
+document.getElementById('settingsDoneBtn').addEventListener('click', () => { sfx.click(); closeSettings(); });
+document.getElementById('menuBtn').addEventListener('click', () => { sfx.click(); withBand(goMenu); });
+document.getElementById('menuBtn2').addEventListener('click', () => { sfx.click(); withBand(goMenu); });
+document.getElementById('pauseRestartBtn').addEventListener('click', () => { sfx.click(); startGame(); });
+document.getElementById('startBtn').addEventListener('click', () => { sfx.click(); beginFromMenu(); });
 document.getElementById('restartBtn').addEventListener('click', () => { sfx.click(); startGame(); });
 document.getElementById('resumeBtn').addEventListener('click', () => { sfx.click(); resumeGame(); });
+
+// First-run teaching: one line that names the goal for the very first run,
+// then a keys line for players with a keyboard.
+let hintTimer = null;
+function showHint(text, ms) {
+  hintEl.textContent = text;
+  hintEl.classList.remove('hidden');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => hintEl.classList.add('hidden'), ms);
+}
+function hideHint() { clearTimeout(hintTimer); hintEl.classList.add('hidden'); }
+let firstRun = store.get('novaDriftPlayed') !== '1';
+let graceRun = false; // first ever run: the first seconds hold orbs only
+const GRACE_SECONDS = 4;
+
+function tierColor(sc) { return ACCENTS[Math.floor(sc / 250) % ACCENTS.length]; }
+let scoreTier = 0;
+function pulseScore() {
+  scoreEl.classList.remove('beat');
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add('beat');
+}
+
+// Re-applies every piece of text that depends on the language.
+function refreshUI() {
+  applyLang();
+  refreshDailyToggleUI();
+  refreshSoundUI();
+  refreshPowerupHud();
+  renderLeaderboard(scores);
+  bestEl.textContent = (dailyMode && (state === 'playing' || state === 'paused'))
+    ? `${t.today}: ${Math.floor(loadDailyBest())}`
+    : `${t.best}: ${Math.floor(best)}`;
+  if (state === 'gameover') updateBestLine();
+}
+function updateBestLine() {
+  bestLineEl.textContent = dailyMode ? '' : `${t.bestLine}: ${Math.floor(best)}`;
+  bestLineEl.classList.toggle('hidden', dailyMode);
+}
 pauseBtn.addEventListener('click', () => {
   if (state === 'playing') pauseGame();
   else if (state === 'paused') resumeGame();
@@ -837,10 +989,7 @@ function refreshDailyToggleUI() {
   dailyInfoStartEl.classList.toggle('hidden', !dailyMode);
   if (dailyMode) dailyBestStartEl.textContent = Math.floor(loadDailyBest());
 }
-refreshDailyToggleUI();
-
-bestEl.textContent = `${t.best}: ${Math.floor(best)}`;
-renderLeaderboard(scores);
+refreshUI();
 
 function refreshPowerupHud() {
   const chips = [];
@@ -891,14 +1040,47 @@ function startGame() {
     : `${t.best}: ${Math.floor(best)}`;
   hud.classList.add('visible');
   pauseBtn.classList.add('visible');
+  document.body.classList.add('playing');
+  scoreTier = 0;
+  scoreEl.style.setProperty('--score-c', ACCENTS[0]);
+  scoreEl.textContent = '0';
   refreshPowerupHud();
   sfx.engineStart();
+  fovKick = 1;
+  // First ever run (never in Daily Mode, whose spawn pattern is fixed): teach
+  // the goal in one line and keep the first seconds free of rocks.
+  graceRun = firstRun && !dailyMode;
+  hideHint();
+  if (firstRun) {
+    firstRun = false;
+    store.set('novaDriftPlayed', '1');
+    showHint(coarsePointer ? t.hintTouch : t.hintPointer, 5500);
+    if (!coarsePointer) setTimeout(() => { if (state === 'playing') showHint(t.hintKeys, 3000); }, 5800);
+  }
+}
+
+// Back to the start screen (from pause or game over).
+function goMenu() {
+  state = 'idle';
+  document.body.classList.remove('playing');
+  hud.classList.remove('visible');
+  pauseBtn.classList.remove('visible');
+  gameOverScreen.classList.add('hidden');
+  pauseScreen.classList.add('hidden');
+  startScreen.classList.remove('hidden');
+  hideHint();
+  sfx.engineStop();
+  joyEnd();
+  refreshUI();
+  focusSoon(document.getElementById('startBtn'));
 }
 
 function endGame() {
   state = 'gameover';
   hud.classList.remove('visible');
   pauseBtn.classList.remove('visible');
+  document.body.classList.remove('playing');
+  hideHint();
   finalScoreEl.textContent = Math.floor(score);
   if (dailyMode) {
     // Daily Challenge runs never touch the endless top-5 leaderboard — they
@@ -921,7 +1103,11 @@ function endGame() {
     dailyInfoEndEl.classList.add('hidden');
     leaderboardEndEl.classList.remove('hidden');
   }
+  const goCard = gameOverScreen.querySelector('.card');
+  goCard.style.setProperty('--card-accent', !newBestEl.classList.contains('hidden') ? '#ffab40' : tierColor(score));
+  updateBestLine();
   gameOverScreen.classList.remove('hidden');
+  focusSoon(document.getElementById('restartBtn'));
   triggerShake(0.3, 0.15);
   flash('#ff3b3b');
   sfx.crash();
@@ -934,6 +1120,8 @@ function pauseGame() {
   state = 'paused';
   hud.classList.remove('visible');
   pauseScreen.classList.remove('hidden');
+  hideHint();
+  focusSoon(document.getElementById('resumeBtn'));
   sfx.engineStop();
   joyEnd();
 }
@@ -948,6 +1136,7 @@ function resumeGame() {
 
 // ---------- Main loop ----------
 const clock = new THREE.Clock();
+let fovKick = 0;
 
 function updatePlaying(dt) {
   survivedT += dt;
@@ -956,6 +1145,12 @@ function updatePlaying(dt) {
   const mult = survivedT < multUntil ? 2 : 1;
   score += speed * dt * 1.1 * mult;
   scoreEl.textContent = Math.floor(score);
+  const tier = Math.floor(score / 250);
+  if (tier !== scoreTier) {
+    scoreTier = tier;
+    scoreEl.style.setProperty('--score-c', tierColor(score));
+    if (!reducedMotion) pulseScore();
+  }
   sfx.engineSet(speed);
 
   // keyboard + joystick nudge the target continuously
@@ -1016,7 +1211,10 @@ function updatePlaying(dt) {
     distSinceSpawn = 0;
     nextSpawnAt = 1.7 + rand() * 1.1;
     const r = rand();
-    if (r < 0.46) spawnFrom(obstacles, shipZ - SPAWN_AHEAD, 'obstacle');
+    if (r < 0.46) {
+      if (graceRun && survivedT < GRACE_SECONDS) spawnFrom(orbs, shipZ - SPAWN_AHEAD, 'orb');
+      else spawnFrom(obstacles, shipZ - SPAWN_AHEAD, 'obstacle');
+    }
     else if (r < 0.88) spawnFrom(orbs, shipZ - SPAWN_AHEAD, 'orb');
     else spawnPowerup(shipZ - SPAWN_AHEAD);
   }
@@ -1077,6 +1275,7 @@ function updatePlaying(dt) {
       if (Math.hypot(dx, dy) < ORB_RADIUS) {
         score += 45 * mult;
         sfx.collect();
+        spawnBurst(orb.x, orb.y, orb.z, 0.48, 0.87, 0.96, 5);
         resetPoolMesh(orb);
       }
     }
@@ -1094,6 +1293,7 @@ function updatePlaying(dt) {
       const dx = p.x - shipX, dy = p.y - shipY;
       if (Math.hypot(dx, dy) < ORB_RADIUS) {
         applyPowerup(p.type);
+        spawnBurst(p.x, p.y, p.z, 1, 0.67, 0.25, 10);
         resetPoolMesh(p);
       }
     }
@@ -1111,6 +1311,13 @@ function updatePlaying(dt) {
   camera.position.z += (camTargetZ - camera.position.z) * Math.min(1, dt * 5);
   camera.lookAt(shipX, shipY, shipZ - 6);
   camera.rotation.z += (-velX * 0.05 - camera.rotation.z) * Math.min(1, dt * 4);
+  // "warp" (the daily-video transition family): the field of view opens
+  // 72 -> 86 and settles back over ~0.45 s when a run starts.
+  if (fovKick > 0) {
+    fovKick = Math.max(0, fovKick - dt / 0.45);
+    camera.fov = fovBase + (reducedMotion ? 0 : 14 * fovKick * fovKick);
+    camera.updateProjectionMatrix();
+  }
 
   if (shakeT > 0) {
     shakeT -= dt;
@@ -1123,25 +1330,32 @@ function updatePlaying(dt) {
 }
 
 function idleDrift(t) {
-  shipGroup.position.set(Math.sin(t * 0.4) * 0.6, Math.cos(t * 0.3) * 0.3, 0);
+  shipGroup.position.set(Math.sin(t * 0.4) * 0.8, -0.85 + Math.cos(t * 0.3) * 0.15, -4.2);
   shipGroup.rotation.y += 0.006;
   shipGroup.rotation.z = Math.sin(t * 0.5) * 0.15;
   camera.position.set(0, 1.05, 4.4);
   camera.lookAt(0, 0, -6);
 }
 
-function animate() {
-  const rawDt = clock.getDelta();
+// One frame. `adapt` is off in manual mode: a fixed 1/30 s step would read as
+// a slow machine to the adaptive render scale.
+let manual = false;
+let manualT = 0;
+function frame(rawDt, t, adapt, draw = true) {
   const dt = Math.min(rawDt, 0.05);
-  const t = clock.getElapsedTime();
-  adaptQuality(rawDt, t);
+  if (adapt) adaptQuality(rawDt, t);
 
   starMat.uniforms.uTime.value = t;
 
   if (state === 'playing') updatePlaying(dt);
   else if (state !== 'paused') idleDrift(t);
 
-  composer.render();
+  if (draw) composer.render();
+}
+
+function animate() {
+  if (manual) return;
+  frame(clock.getDelta(), clock.getElapsedTime(), true);
   requestAnimationFrame(animate);
 }
 requestAnimationFrame(animate);
@@ -1163,6 +1377,17 @@ if (new URLSearchParams(window.location.search).get('debug') === '1') {
     dailySeed,
     getRenderScale() { return renderScale; },
     heldKeys() { return [...keys]; },
+    // Frame-exact driving, used to record the promo clip and to measure input
+    // latency: manual() stops the rAF loop, step(dt) advances one frame
+    // (step(dt, false) skips drawing: a software-GL machine cannot keep up with
+    // hundreds of queued frames).
+    manual() { manual = true; },
+    step(dt, draw = true) { manualT += dt; frame(dt, manualT, false, draw); },
+    world() {
+      const live = (pool) => pool.filter((o) => o.active).map((o) => ({ x: o.x, y: o.y, z: o.z }));
+      return { state, shipX, shipY, shipZ, targetX: target.x, targetY: target.y, score,
+        obstacles: live(obstacles), orbs: live(orbs), powerups: live(powerups), speed };
+    },
     nextRenderScale,
   };
 }
