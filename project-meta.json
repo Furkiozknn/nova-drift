@@ -55,9 +55,9 @@
     "videos": []
   },
   "tests": {
-    "count": 42,
-    "source": "`42 passed` (Playwright)",
-    "measured": "2026-09-25"
+    "count": 61,
+    "source": "`61 passed` (Playwright)",
+    "measured": "2026-09-29"
   },
   "ci": {
     "workflows": [
