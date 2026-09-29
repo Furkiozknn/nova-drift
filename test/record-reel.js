@@ -37,8 +37,8 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 function serve() {
   return new Promise((resolve) => {
     const srv = http.createServer((req, res) => {
-      const f = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]).replace(/^\//, '') || 'index.html');
-      if (f !== ROOT && !f.startsWith(ROOT + path.sep)) { res.writeHead(403); res.end(); return; } // yol disina cikma (..) yok
+      const rel = path.posix.normalize('/' + decodeURIComponent(req.url.split('?')[0])); // '/' oneki: '..' kok disina cikamaz
+      const f = path.join(ROOT, rel === '/' ? 'index.html' : rel);
       fs.readFile(f, (err, buf) => {
         if (err) { res.writeHead(404); res.end(); return; }
         res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' });
