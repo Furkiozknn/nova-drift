@@ -6,7 +6,7 @@
 //    other file says otherwise - including vendor/README.md, which names a
 //    version it no longer contains.
 //
-// 2. IT CAN LOSE THE FONT. vendor/ also holds `fonts/orbitron-latin.woff2`,
+// 2. IT CAN LOSE THE FONT. vendor/ also holds `fonts/*.woff2`,
 //    which styles.css loads and the vendor script knows nothing about. When
 //    the script began by deleting the whole directory, running the command
 //    vendor/README.md documents removed the font. Nothing caught it: the
@@ -89,7 +89,7 @@ test('regenerating does not delete a sibling the script does not own', () => {
 
 test('the font styles.css asks for is actually in the repository', () => {
   const css = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
-  const m = css.match(/src:\s*url\('([^']+)'\)/);
-  expect(m, 'styles.css no longer declares a @font-face src').not.toBeNull();
-  expect(fs.existsSync(path.join(ROOT, m[1]))).toBe(true);
+  const srcs = [...css.matchAll(/src:\s*url\('([^']+)'\)/g)].map((m) => m[1]);
+  expect(srcs.length, 'styles.css no longer declares a @font-face src').toBeGreaterThan(0);
+  for (const src of srcs) expect(fs.existsSync(path.join(ROOT, src)), src).toBe(true);
 });

@@ -4,6 +4,7 @@
 // itself is built or served (still plain static HTML/CSS/JS, no bundler).
 const { test, expect } = require('@playwright/test');
 const { sealToOrigin } = require('./fixtures');
+test.use({ locale: 'en-US' });
 
 function collectConsoleErrors(page) {
   const errors = [];

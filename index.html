@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Nova Drift — a fast space run through a tunnel of light - dodge the rocks, grab the orbs.">
-<meta name="theme-color" content="#05020c">
+<meta name="theme-color" content="#0d071a">
 <title>Nova Drift</title>
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="manifest" href="manifest.json">
@@ -36,53 +36,85 @@
 <body>
 <canvas id="scene"></canvas>
 <div id="hitFlash" aria-hidden="true"></div>
-
-<button id="muteBtn" aria-label="Mute or unmute">🔊</button>
-<button id="pauseBtn" aria-label="Pause">⏸</button>
+<div id="band" aria-hidden="true"></div>
 
 <div id="hud">
   <div id="score">0</div>
-  <div id="best">BEST: 0</div>
-  <div id="modeTag" class="modeTag hidden">DAILY MODE</div>
+  <div id="modeTag" class="tag hidden" data-i18n="modeTag">DAILY MODE</div>
   <div id="powerups"></div>
 </div>
+<div id="best" class="tag cornerL"><span data-i18n="best">BEST</span>: 0</div>
+
+<div id="corner">
+  <button id="pauseBtn" class="iconBtn" aria-label="Pause" data-i18n-aria="pause">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+  </button>
+  <button id="muteBtn" class="iconBtn" aria-label="Mute or unmute" data-i18n-aria="muteAria" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="waves" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="slash" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+</div>
+
+<div id="hint" class="hint hidden" role="status" aria-live="polite"></div>
 
 <div id="joystick" class="hidden">
   <div id="joystickKnob"></div>
 </div>
 
 <div id="startScreen" class="overlay">
-  <h1>NOVA DRIFT</h1>
-  <p class="tagline">survive a tunnel of light</p>
-  <div class="controls">
-    <span>🖱️ / 👆 drag</span>
-    <span>⌨️ arrows · WASD</span>
-    <span class="escHint">⏸ ESC pause</span>
+  <div class="tag cornerTL" data-i18n="free">FREE · IN YOUR BROWSER</div>
+  <div class="stack">
+    <h1>NOVA DRIFT</h1>
+    <div class="stripe" aria-hidden="true"><i></i><i></i><i></i></div>
+    <button id="startBtn" class="btn primary big" data-i18n="play">PLAY</button>
+    <p class="how" id="howLine" data-i18n="how">Steer with mouse, touch or arrows. Grab the cyan orbs, dodge the red rocks.</p>
+    <div class="row">
+      <button id="dailyToggleBtn" class="btn ghost modeToggle" type="button" aria-pressed="false">DAILY MODE: OFF</button>
+      <button id="settingsBtn" class="btn ghost" type="button" data-i18n="settings">SETTINGS</button>
+    </div>
+    <div id="dailyInfoStart" class="tag dailyInfo hidden"><span data-i18n="todayBest">today's best</span>: <span id="dailyBestStart">0</span></div>
+    <div id="leaderboardStart" class="leaderboard"></div>
   </div>
-  <p class="legend"><span class="dot orb"></span> collect &nbsp; <span class="dot rock"></span> avoid</p>
-  <div class="legend powerlegend">
-    <img class="icon" src="assets/icon_shield.png" alt=""> shield &nbsp;
-    <img class="icon" src="assets/icon_magnet.png" alt=""> magnet &nbsp;
-    <img class="icon" src="assets/icon_mult.png" alt=""> x2 score
-  </div>
-  <button id="startBtn">START</button>
-  <button id="dailyToggleBtn" class="modeToggle" type="button" aria-pressed="false">DAILY MODE: OFF</button>
-  <div id="dailyInfoStart" class="dailyInfo hidden">today's best: <span id="dailyBestStart">0</span></div>
-  <div id="leaderboardStart" class="leaderboard"></div>
 </div>
 
 <div id="gameOverScreen" class="overlay hidden">
-  <h2>CRASH</h2>
-  <div id="finalScore">0</div>
-  <p id="newBest" class="hidden">new record!</p>
-  <button id="restartBtn">TRY AGAIN</button>
-  <div id="dailyInfoEnd" class="dailyInfo hidden">today's best: <span id="dailyBestEnd">0</span> <span id="newDailyBest" class="hidden">(new daily best!)</span></div>
-  <div id="leaderboardEnd" class="leaderboard"></div>
+  <div class="card" role="dialog" aria-labelledby="goTitle">
+    <div class="tag" id="goTitle" data-i18n="runEnded">RUN ENDED</div>
+    <div id="finalScore">0</div>
+    <div id="newBest" class="stamp hidden" data-i18n="newRecord">NEW RECORD</div>
+    <div id="bestLine" class="tag dark"></div>
+    <div id="dailyInfoEnd" class="tag dark dailyInfo hidden"><span data-i18n="todayBest">today's best</span>: <span id="dailyBestEnd">0</span> <span id="newDailyBest" class="hidden" data-i18n="newDaily">(new daily best!)</span></div>
+    <div id="leaderboardEnd" class="leaderboard dark"></div>
+    <button id="restartBtn" class="btn primary" data-i18n="again">TRY AGAIN</button>
+    <button id="menuBtn2" class="btn ghost dark" type="button" data-i18n="menu">MENU</button>
+  </div>
 </div>
 
 <div id="pauseScreen" class="overlay hidden">
-  <h2 class="pauseTitle">PAUSED</h2>
-  <button id="resumeBtn">RESUME</button>
+  <div class="card" role="dialog" aria-labelledby="pauseTitle">
+    <div class="tag" id="pauseTitle" data-i18n="paused">PAUSED</div>
+    <button id="resumeBtn" class="btn primary" data-i18n="resume">RESUME</button>
+    <button id="pauseRestartBtn" class="btn ghost dark" type="button" data-i18n="restart">RESTART</button>
+    <button id="pauseSettingsBtn" class="btn ghost dark" type="button" data-i18n="settings">SETTINGS</button>
+    <button id="menuBtn" class="btn ghost dark" type="button" data-i18n="menu">MENU</button>
+  </div>
+</div>
+
+<div id="settingsScreen" class="overlay hidden">
+  <div class="card" role="dialog" aria-labelledby="settingsTitle">
+    <div class="tag" id="settingsTitle" data-i18n="settings">SETTINGS</div>
+    <div class="setRow">
+      <span data-i18n="sound">Sound</span>
+      <button id="soundToggle" class="btn ghost dark small" type="button" aria-pressed="true">ON</button>
+    </div>
+    <div class="setRow">
+      <span data-i18n="language">Language</span>
+      <span class="seg" role="group" aria-label="Language">
+        <button id="langEn" class="btn ghost dark small" type="button" aria-pressed="false" lang="en">EN</button>
+        <button id="langTr" class="btn ghost dark small" type="button" aria-pressed="false" lang="tr">TR</button>
+      </span>
+    </div>
+    <button id="settingsDoneBtn" class="btn primary" data-i18n="done">DONE</button>
+  </div>
 </div>
 
 <script type="module" src="script.js"></script>

@@ -7,6 +7,6 @@ These files are here so the game makes no external request, which is a
 hard requirement for the web game portals. MIT licensed, same as three.
 
 `fonts/` is NOT generated and is not touched by that script - it holds the
-Orbitron woff2 that styles.css loads. test/vendor.spec.js checks both:
+Instrument Sans + JetBrains Mono woff2 subsets that styles.css loads. test/vendor.spec.js checks both:
 that the files above match the pinned three, and that regenerating them
 leaves the font alone.

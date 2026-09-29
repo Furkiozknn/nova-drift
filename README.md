@@ -9,8 +9,8 @@
 
 ![Nova Drift gameplay: the ship banks through a tunnel of light rings, dodging red rocks and collecting cyan orbs while the score counts up to 673](assets/gameplay.webp)
 
-<sub>Real gameplay, not a montage: <code>node test/capture-gif.js</code> opens the game sealed to its own origin,
-steers it with the keyboard and writes every frame. Six seconds of one run, 0.66 MB.</sub>
+<sub>Real gameplay, not a montage: <code>node test/record-reel.js</code> opens the game with its interface hidden (<code>?rec=1</code>),
+steps it frame by frame, steers it with pointer input and writes every frame. Six seconds of one portrait run, 0.46 MB.</sub>
 
 ![License](https://img.shields.io/badge/license-MIT-a5d9ff?style=flat-square)
 ![Three.js](https://img.shields.io/badge/three.js-r160-ffb3d9?style=flat-square)
@@ -31,9 +31,9 @@ It is a small, honest piece of web tech: real [Three.js](https://threejs.org/) b
 |---|---|
 | **Play** | [furkiozknn.github.io/nova-drift](https://furkiozknn.github.io/nova-drift/) — or [run it locally](#run-locally) in one command |
 | **Objective** | Survive as long as you can; score comes from distance, orbs and near-misses |
-| **Controls** | Mouse / touch-drag / arrow keys or WASD · `Space`/`Enter` start · `Esc` pause |
+| **Controls** | Mouse / touch-drag / arrow keys or WASD · `Space`/`Enter` start · `Esc` pause · Settings: sound, language (EN/TR) |
 | **Platform** | Desktop and mobile browsers with WebGL and import maps (Chrome/Edge 89+, Firefox 108+, Safari 16.4+) |
-| **Weight** | About 0.8 MB on first load, 21 requests, all from the page's own origin |
+| **Weight** | About 0.87 MB on first load (868,177 bytes measured), 19 requests, all from the page's own origin |
 
 ## Table of Contents
 
@@ -78,8 +78,8 @@ Stay alive. A run ends the moment the ship touches a red rock (unless a shield a
 | 🖱️ Mouse move | Ship follows your pointer directly |
 | 👆 Touch-drag | A virtual joystick appears wherever you touch |
 | ⌨️ Arrow keys / WASD | Nudge the ship left / right / up / down |
-| `Space` / `Enter` | Start or restart the run |
-| `Escape` / pause button | Pause — freezes the scene exactly where it was |
+| `Space` / `Enter` | Start or restart the run (a focused button gets its own key press instead) |
+| `Escape` / pause button | Pause — freezes the scene exactly where it was; Resume, Restart, Settings and Menu on the card |
 | Switch window / tab | Pauses automatically and releases any held key, so the ship does not drift into a wall while you are away |
 
 The ship never chases your pointer instantly — its position *eases* toward a target each frame, and the last frame's velocity drives a small bank-and-tilt rotation, so movement reads as inertia rather than teleportation.
@@ -112,7 +112,7 @@ The top **5** scores persist locally via `localStorage` and are rendered on both
 
 ### Daily Challenge
 
-A toggle on the start screen ("GÜNLÜK MOD") switches spawning from real randomness to a **seeded** run: a small [mulberry32](https://github.com/bryc/code/blob/master/jshash/PRNGs.md) PRNG, seeded from the current UTC date (`YYYYMMDD` as an integer), replaces every `Math.random()` call in the obstacle/orb/power-up spawn logic. Two players who open the page on the same calendar day get the byte-for-byte identical spawn sequence — same obstacles, same orbs, same power-ups, in the same order — so their scores are genuinely comparable, not just two unrelated random runs.
+A toggle on the start screen ("DAILY MODE" / "GÜNLÜK MOD") switches spawning from real randomness to a **seeded** run: a small [mulberry32](https://github.com/bryc/code/blob/master/jshash/PRNGs.md) PRNG, seeded from the current UTC date (`YYYYMMDD` as an integer), replaces every `Math.random()` call in the obstacle/orb/power-up spawn logic. Two players who open the page on the same calendar day get the byte-for-byte identical spawn sequence — same obstacles, same orbs, same power-ups, in the same order — so their scores are genuinely comparable, not just two unrelated random runs.
 
 Today's Daily Challenge best is tracked separately from the endless-mode top-5 (`localStorage` key `novaDriftDaily-YYYYMMDD`, one per day) so the two modes never mix. Regular endless mode is untouched — it still calls real `Math.random()` — this is strictly additive.
 
@@ -147,7 +147,7 @@ Colors are rendered in `SRGBColorSpace` and finished with `ACESFilmicToneMapping
 Two independent point-cloud systems, both custom `ShaderMaterial`s with additive blending and pixel-ratio-aware point sizing so they stay crisp on high-DPI screens:
 
 - **Starfield** — 700 points with a per-star phase offset driving a sine-wave twinkle in the fragment shader
-- **Engine trail + impact bursts** — a shared pool of 70 particles. Idle exhaust spawns continuously behind the ship in alternating pink/cyan; a shield block spawns a one-off radial burst at the impact point. Both fade via a `life` value decayed each frame
+- **Engine trail + impact bursts** — a shared pool of 70 particles. Idle exhaust spawns continuously behind the ship in alternating pink/cyan; a shield block, an orb pickup and a power-up pickup each spawn a small radial burst (5, 5 and 10 particles) at the spot. Both fade via a `life` value decayed each frame
 
 ### Object Pooling
 
@@ -172,17 +172,21 @@ Every sound effect is generated live with the **Web Audio API** — there isn't 
 
 ### Accessibility
 
-Screen shake, the hit-flash overlay, and the title shimmer animation all check `prefers-reduced-motion` and quietly disable themselves when it's set — no motion-triggered discomfort for players who've asked their OS to avoid it.
+Screen shake, the hit-flash overlay, the start-of-run "warp" (field-of-view kick), the score pulse, the screen-change iris and every menu animation check `prefers-reduced-motion` and quietly disable themselves when it's set — no motion-triggered discomfort for players who've asked their OS to avoid it. Every button has a visible focus ring, overlays leave the tab order while hidden, the primary action of each card takes focus, and text/background pairs are held to WCAG AA (4.5:1) by `test/contrast.spec.js`.
+
+### Language
+
+The interface is English and Turkish. It follows the browser language (`tr*` gets Turkish, everything else English); **Settings → Language** overrides that and the choice is stored under its own key (`novaDriftLang`), so no existing save is touched. First run only: a one-line hint names the goal and the first four seconds hold orbs and no rocks (never in Daily Mode, whose pattern is fixed).
 
 ---
 
 ## Platform & Performance
 
 - **Runs on** any browser with WebGL, ES modules and import maps — Chrome/Edge 89+, Firefox 108+, Safari 16.4+ — on desktop and mobile. The automated suite runs in Chromium; other engines are covered by the [manual smoke test](#manual-smoke-test). The page is also a PWA (`manifest.json`; "Add to Home Screen" launches it fullscreen).
-- **First load** is about 0.8 MB uncompressed across 21 requests (measured in Chromium against a local server: 808,235 bytes; `vendor/three.module.min.js` is 671 KB of that). Nothing comes from another origin, so it works on locked-down networks and inside game-portal iframes.
+- **First load** is about 0.87 MB uncompressed across 19 requests (measured in Chromium against a local server: 868,177 bytes; `vendor/three.module.min.js` is 671 KB of that, the three font files 61 KB). Nothing comes from another origin, so it works on locked-down networks and inside game-portal iframes.
 - **Adaptive render scale.** A 60-frame moving average of frame time lowers the render scale in 0.15 steps (floor 0.6) when frames exceed 20 ms, and raises it in 0.1 steps below 12.5 ms, with a 2 s cooldown. The bloom pass is what a slow phone pays for, and it scales with pixel count.
 - **No allocation during play.** Obstacles, orbs, power-ups, stars and trail particles are pooled (see [Object Pooling](#object-pooling)); the physics step clamps `dt` to 0.05 s so a stalled frame never teleports the ship.
-- **Storage is optional.** Scores, the daily best and the mute switch live in `localStorage`; when a browser refuses site data (private mode, third-party iframe) the game still starts and plays, it just forgets on reload.
+- **Storage is optional.** Scores, the daily best, the mute switch and the language choice live in `localStorage`; when a browser refuses site data (private mode, third-party iframe) the game still starts and plays, it just forgets on reload.
 
 ## Run Locally
 
@@ -203,9 +207,9 @@ It **must** be served over HTTP: `index.html` loads Three.js through an ES modul
 |---|---|
 | Black page, nothing happens, console says a module was blocked | You opened `index.html` from disk. Serve the folder over HTTP (see above). |
 | Black canvas, console mentions WebGL | WebGL is disabled or unavailable (remote desktop, blocklisted GPU driver). Enable hardware acceleration in the browser settings, or try another browser. |
-| No sound | Browsers only allow audio after a user gesture — press START first. Check the 🔊 button; mute persists across reloads. |
+| No sound | Browsers only allow audio after a user gesture — press PLAY first. Check the speaker button (or Settings → Sound); mute persists across reloads. |
 | Low frame rate | The render scale drops automatically; give it two seconds. On very old hardware close other GPU-heavy tabs. |
-| The HUD is in Turkish | The game follows the browser language: Turkish browsers get Turkish text, everything else gets English. |
+| The interface is in Turkish | The game follows the browser language: Turkish browsers get Turkish text, everything else gets English. Change it in Settings → Language. |
 
 ## Testing
 
@@ -214,7 +218,7 @@ A dev-only Playwright suite; it adds no build step to the game itself, which sta
 ```bash
 npm install
 npx playwright install --with-deps chromium   # first run only
-npm test                                      # 42 tests in 10 spec files
+npm test                                      # 61 tests in 13 spec files
 ```
 
 `PW_CHROMIUM_PATH=/path/to/chrome npm test` points the suite at an already-installed Chromium on machines without a browser download. Every spec runs with the page **sealed to its own origin**: any request to another origin is aborted, exactly as it would fail on a game portal's network, so a reintroduced CDN import breaks CI instead of passing it. CI (`.github/workflows/ci.yml`) runs the whole suite on Node 20 and 22 on every push and pull request.
@@ -228,8 +232,11 @@ npm test                                      # 42 tests in 10 spec files
 | `storage.spec.js` | The game starts, scores and mutes with `localStorage` throwing on every call |
 | `no-external-requests.spec.js` | Nothing leaves the origin (observed, not just blocked) |
 | `portal-sizes.spec.js` | The game starts and fits at the viewports Poki and CrazyGames require |
-| `language.spec.js` | English markup; Turkish overlaid on a Turkish browser |
-| `font.spec.js` | The vendored woff2 is served and Orbitron is what the HUD renders in |
+| `language.spec.js` | English markup; Turkish on a Turkish browser; the Settings switch and its own storage key; saved scores untouched |
+| `font.spec.js` | Every vendored woff2 is served; Instrument Sans and JetBrains Mono are what the UI renders in; the Turkish letters are in the subset |
+| `menu.spec.js` | Start, pause (Resume/Restart/Menu/Settings), game over (score, best, record stamp, focus, Enter to retry), settings, first-run hint and grace, focus ring, recording mode |
+| `feel.spec.js` | Pointer input reaches the ship within 3 frames; the ship covers 90% of a full-width move in under 0.5 s |
+| `contrast.spec.js` | Every text/background pair and score-tier colour is at least 4.5:1 |
 | `vendor.spec.js` | `vendor/` is exactly what `scripts/vendor-three.mjs` produces from the pinned `three`, and regenerating keeps `vendor/fonts/` |
 
 ### Manual smoke test
@@ -241,30 +248,30 @@ Automated tests cannot judge feel. Before a release, play one run in a real brow
 3. Steer with the arrow keys, then WASD, then the mouse; on a phone, touch-drag shows the joystick.
 4. Press `Esc` — the scene freezes and the score stops; `Esc` again resumes. Switch to another tab and back — the game is paused.
 5. Fly through an orb (+45 and a chime) and a power-up (icon appears under the score).
-6. Crash into a rock — CRASH screen, final score, leaderboard; `Enter` starts a new run.
+6. Crash into a rock — RUN ENDED card with score, best and leaderboard, TRY AGAIN focused; `Enter` starts a new run, MENU returns to the start screen.
 7. Toggle **DAILY MODE**, play, and confirm "today's best" is tracked separately from the top 5.
-8. Mute with 🔊, reload, and confirm it stays muted.
+8. Mute with the speaker button (or Settings → Sound), reload, and confirm it stays muted. Switch the language in Settings and confirm every screen follows.
 
 ### Regenerating the demo media
 
 The animation and stills in this README are captured from the game itself, never drawn. Both scripts seal the page to its own origin, run the browser in `en-US` and drive the game clock with Playwright's fake clock, so each frame is exactly one step of game time even on a software renderer.
 
 ```bash
-node test/capture-gif.js .capture 150 25          # 150 frames of real play at 25 fps -> .capture/k000.png ...
-ffmpeg -y -framerate 25 -i .capture/k%03d.png \
-  -vf "fps=12.5,scale=640:-2:flags=lanczos" \
-  -c:v libwebp_anim -lossless 0 -quality 68 -compression_level 6 -loop 0 assets/gameplay.webp
-node test/capture-shot.js assets/og-preview.jpg 4400 1200 630   # social-share card
+node test/record-reel.js .capture 18 30            # 18 s of portrait 1080x1920 play, interface hidden -> .capture/f0000.jpg ...
+ffmpeg -y -framerate 30 -start_number 150 -t 6 -i .capture/f%04d.jpg \
+  -vf "fps=12,scale=320:-1:flags=lanczos" \
+  -c:v libwebp_anim -lossless 0 -quality 45 -compression_level 4 -loop 0 assets/gameplay.webp
+node test/capture-screens.js .capture              # start / play / pause / settings / game over, desktop + mobile, EN + TR
 ```
 
-The capture script retries up to six runs and keeps the longest, so the exact frames differ between captures. `.capture/` is git-ignored.
+The pilot is a humanlike pointer driver (0.17 s reaction delay, hand tremor, one deliberate crash), so the exact frames differ with the game's own randomness. `test/capture-gif.js` and `test/capture-shot.js` remain for keyboard-driven landscape captures. Set `PW_ARGS="--use-angle=d3d11 --ignore-gpu-blocklist"` to use a real GPU. `.capture/` is git-ignored.
 
 ## Project Structure
 
 ```
 nova-drift/
 ├── index.html          # markup, HUD, overlays, import map, OG/Twitter meta
-├── styles.css           # HUD, overlays, joystick, buttons, daily-mode UI
+├── styles.css           # palette tokens, HUD, overlays, cards, buttons, screen band
 ├── script.js            # scene setup, game loop, audio, everything
 ├── rng.js                # the daily seed + PRNG, alone so tests can import it
 ├── manifest.json         # PWA manifest (installable, fullscreen)
@@ -278,21 +285,26 @@ nova-drift/
 │   ├── storage.spec.js     # the game with localStorage throwing on every call
 │   ├── no-external-requests.spec.js  # nothing may leave the origin
 │   ├── portal-sizes.spec.js  # the viewports Poki and CrazyGames require
-│   ├── language.spec.js    # English markup, Turkish overlaid on a Turkish browser
-│   ├── font.spec.js        # the vendored woff2 really loads; Orbitron is what renders
+│   ├── language.spec.js    # English markup, Turkish browser, Settings switch, saved scores untouched
+│   ├── font.spec.js        # the vendored woff2 really loads; Instrument Sans + JetBrains Mono render
+│   ├── menu.spec.js        # start / pause / game over / settings / first-run flows
+│   ├── feel.spec.js        # input latency and follow speed guards
+│   ├── contrast.spec.js    # WCAG AA for every palette pair
 │   ├── vendor.spec.js      # vendor/ matches the pinned three, and keeps the font
 │   ├── fixtures.js         # seals the page to its own origin, shared by the specs above
-│   ├── capture-gif.js      # dev-only: records gameplay frames for the README animation
+│   ├── record-reel.js      # dev-only: portrait gameplay frames for the README animation and the promo clip
+│   ├── capture-screens.js  # dev-only: screenshots of every screen, desktop + mobile, EN + TR
+│   ├── capture-gif.js      # dev-only: keyboard-driven landscape frames
 │   └── capture-shot.js     # dev-only: a single still (before/after on the art, social card)
 ├── scripts/vendor-three.mjs  # copies the Three.js files the import graph reaches
-├── vendor/                  # Three.js + the font, shipped so nothing is fetched
+├── vendor/                  # Three.js + Instrument Sans / JetBrains Mono (OFL), shipped so nothing is fetched
 ├── .github/workflows/ci.yml  # runs the suite on push/PR
 └── assets/
     ├── banner.svg              # hero graphic (this README)
     ├── diagram-how-it-works.svg
     ├── powerups-strip.svg
     ├── scoring-breakdown.svg
-    ├── gameplay.webp           # README animation, 6 s of real play (animated WebP, 0.66 MB)
+    ├── gameplay.webp           # README animation, 6 s of real portrait play (animated WebP, 0.46 MB)
     ├── screenshot.webp         # README still, one frame of the same run
     ├── og-preview.jpg          # social-share preview image (Open Graph / Twitter Card)
     ├── nebula.webp             # backdrop, 32 KB
@@ -306,7 +318,7 @@ nova-drift/
 | **Engine** | [Three.js](https://threejs.org/) r160, loaded via an ES module import map pointed at the vendored copy in `vendor/` — no bundler, no CDN, no `node_modules` at runtime |
 | **Rendering** | Real bloom post-processing (`EffectComposer` + `UnrealBloomPass`), ACES filmic tone mapping |
 | **Audio** | 100% synthesized with the Web Audio API — zero audio files |
-| **Markup / styling** | Plain HTML + CSS, `Orbitron` shipped with the game — the portals reject any external request |
+| **Markup / styling** | Plain HTML + CSS, Instrument Sans + JetBrains Mono (SIL OFL, Latin + Turkish subsets) shipped with the game — the portals reject any external request. Palette from the game's own promo video; design notes in [`docs/TASARIM.md`](docs/TASARIM.md), audit in [`docs/DENETIM.md`](docs/DENETIM.md) |
 | **Art** | The ship is flat-coloured Three.js geometry, not a sprite: it is built along `-Z` so it reads as flying away from any angle and can actually bank into a turn. The nebula backdrop is an AI-generated image. Every line of game logic, rendering and audio synthesis is hand-written |
 | **Build step** | None. Clone it, serve it, play it |
 
