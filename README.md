@@ -326,6 +326,8 @@ nova-drift/
 
 MIT — see [`LICENSE`](LICENSE).
 
+Built with Claude Code; the `Co-Authored-By` trail in the commit history shows which models were used. Game loop: [`script.js`](script.js).
+
 ---
 
 ## Bu ekosistemden başka projeler
