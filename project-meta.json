@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "id": "nova-drift",
+  "owner": "Furkiozknn",
+  "repository": "https://github.com/Furkiozknn/nova-drift",
+  "homepage": "https://furkiozknn.github.io/isik-tuneli/",
+  "releases": "https://github.com/Furkiozknn/nova-drift/releases",
+  "status": "archived",
+  "category": "profile",
+  "platform": [
+    "web"
+  ],
+  "primary_language": "HTML",
+  "technologies": [
+    "static redirect page"
+  ],
+  "version": null,
+  "license": null,
+  "topics": [],
+  "summary": "Redirect: Nova Drift is now Işık Tüneli · Yönlendirme: Nova Drift'in yeni adı Işık Tüneli",
+  "key_features": [
+    "Only forwards the old Pages address https://furkiozknn.github.io/nova-drift/ to https://furkiozknn.github.io/isik-tuneli/, keeping path, query and hash; the game lives in Furkiozknn/isik-tuneli"
+  ],
+  "media": {
+    "hero": null,
+    "screenshots": [],
+    "gifs": [],
+    "videos": []
+  },
+  "ci": {
+    "workflows": [],
+    "badge": null
+  },
+  "docs": {
+    "readme": "README.md",
+    "changelog": null,
+    "version_history": null,
+    "roadmap": null,
+    "security": null,
+    "contributing": null,
+    "license_file": null
+  },
+  "provenance": {
+    "generated_at": "2026-10-19",
+    "generator": "hand-written",
+    "rule": "mechanical fields read from the repository and the GitHub API; editorial fields hand-written from the README; no field is generated from a guess"
+  }
+}
